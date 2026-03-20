@@ -5,9 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DOCUFLOW PRO | โรงเรียนโคราชพิทยาคม</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
         :root { --primary: #6366f1; --danger: #ef4444; --success: #10b981; --warning: #f59e0b; --admin-dark: #1e293b; --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); }
@@ -26,11 +23,13 @@
         .main-layout { display: grid; grid-template-columns: 350px 1fr; gap: 1.5rem; }
         .card { background: white; border-radius: 20px; padding: 1.5rem; box-shadow: var(--card-shadow); margin-bottom: 1.5rem; position: relative; }
         .form-control { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 12px; box-sizing: border-box; font-family: 'Sarabun'; margin: 5px 0 15px 0; font-size: 1rem; }
-        .tab-group { display: flex; background: #f1f5f9; padding: 5px; border-radius: 12px; margin-bottom: 1.5rem; }
-        .tab-btn { flex: 1; padding: 10px; border: none; background: none; cursor: pointer; font-weight: 700; color: #64748b; border-radius: 8px; font-family: 'Sarabun'; font-size: 0.8rem; }
+        .tab-group { display: flex; background: #f1f5f9; padding: 5px; border-radius: 12px; margin-bottom: 1.5rem; flex-wrap: wrap; }
+        .tab-btn { flex: 1; padding: 10px; border: none; background: none; cursor: pointer; font-weight: 700; color: #64748b; border-radius: 8px; font-family: 'Sarabun'; font-size: 0.75rem; white-space: nowrap; }
         .tab-btn.active { background: white; color: var(--primary); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         .btn { padding: 12px 20px; border-radius: 12px; border: none; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; font-family: 'Sarabun'; transition: 0.3s; justify-content: center; }
         .btn-primary { background: var(--primary); color: white; width: 100%; }
+        .btn-outline { background: transparent; border: 2px solid #e2e8f0; color: #64748b; font-size: 0.8rem; padding: 8px 15px; }
+        .btn-danger { background: var(--danger); color: white; font-size: 0.8rem; }
         .admin-panel { background: #fff1f2; border: 2px dashed var(--danger); border-radius: 15px; padding: 15px; margin-bottom: 1.5rem; display: none; align-items: center; justify-content: space-between; gap: 10px; }
         body.is-admin .admin-panel { display: flex; }
         table { width: 100%; border-collapse: collapse; }
@@ -44,17 +43,19 @@
         .admin-only { display: none !important; }
         body.is-admin .admin-only { display: inline-flex !important; }
         body.is-admin .admin-fab { background: var(--danger); transform: rotate(360deg); }
+        .history-filter-group { display: flex; gap: 5px; background: #f8fafc; padding: 5px; border-radius: 10px; margin-bottom: 1rem; border: 1px solid #e2e8f0; }
+        .filter-btn { flex: 1; border: none; background: none; padding: 8px 5px; font-family: 'Sarabun'; font-size: 0.7rem; font-weight: 700; color: #94a3b8; cursor: pointer; border-radius: 6px; }
+        .filter-btn.active { background: var(--primary); color: white; }
         @media (max-width: 768px) {
             .main-layout { grid-template-columns: 1fr; }
             .dashboard-grid { grid-template-columns: 1fr; }
             thead { display: none; }
-            tr { display: block; border: 1px solid #e2e8f0; margin-bottom: 1rem; border-radius: 10px; padding: 10px; background: white;}
-            td { display: block; text-align: left; padding: 5px; border: none;}
-            td:before { content: attr(data-label); font-weight: bold; display: block; font-size: 0.7rem; color: #94a3b8; }
+            tr { display: block; background: #fff; border: 1px solid #e2e8f0; border-radius: 15px; margin-bottom: 1rem; padding: 10px; }
+            td { display: block; border: none; padding: 5px 10px; text-align: left; }
+            td:before { content: attr(data-label); font-weight: 700; color: #94a3b8; font-size: 0.7rem; display: block; margin-bottom: 2px; }
         }
         .action-btns { display: flex; gap: 8px; }
         .icon-btn { cursor: pointer; padding: 8px; border-radius: 8px; background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; font-size: 0.9rem; }
-        .icon-btn:hover { background: #e2e8f0; }
     </style>
 </head>
 <body id="body">
@@ -70,24 +71,36 @@
 <div class="container">
     <div class="admin-panel">
         <div>
-            <strong style="color:var(--danger)"><i class="fa-solid fa-unlock"></i> ADMIN MODE ACTIVE</strong>
-            <div style="font-size: 0.7rem; color: #b91c1c;">คุณสามารถแก้ไขหรือลบข้อมูลใน Cloud ได้โดยตรง</div>
+            <strong style="color:var(--danger)"><i class="fa-solid fa-unlock"></i> ADMIN MODE</strong>
+            <div style="font-size: 0.7rem; color: #b91c1c;">จัดการฐานข้อมูลและส่งออกไฟล์</div>
         </div>
         <div style="display: flex; gap: 10px;">
-            <button class="btn btn-outline" style="background:white;" onclick="exportToExcel()"><i class="fa-solid fa-file-excel"></i> Export CSV</button>
-            <button class="btn btn-danger" onclick="clearAllData()"><i class="fa-solid fa-trash-can"></i> ล้าง Cloud</button>
+            <button class="btn btn-outline" style="background:white" onclick="exportToExcel()"><i class="fa-solid fa-file-excel"></i> Export CSV</button>
+            <button class="btn btn-danger" onclick="clearAllData()"><i class="fa-solid fa-trash-can"></i> ล้างทั้งหมด</button>
         </div>
     </div>
 
     <div class="dashboard-grid">
-        <div class="stat-card"><div class="stat-label">คำสั่งล่าสุด</div><div class="stat-val" id="last-order">-</div><div class="stat-total" id="total-order">ยอดรวม: 0</div></div>
-        <div class="stat-card" style="border-left-color: var(--success)"><div class="stat-label">หนังสือส่งล่าสุด</div><div class="stat-val" id="last-mail">-</div><div class="stat-total" id="total-mail">ยอดรวม: 0</div></div>
-        <div class="stat-card" style="border-left-color: var(--warning)"><div class="stat-label">เกียรติบัตรล่าสุด</div><div class="stat-val" id="last-cert">-</div><div class="stat-total" id="total-cert">ยอดรวม: 0</div></div>
+        <div class="stat-card" style="border-left-color: var(--primary)">
+            <div class="stat-label">คำสั่งล่าสุด</div>
+            <div class="stat-val" id="last-order">-</div>
+            <div class="stat-total" id="total-order">ยอดรวม: 0 รายการ</div>
+        </div>
+        <div class="stat-card" style="border-left-color: var(--success)">
+            <div class="stat-label">หนังสือส่งล่าสุด</div>
+            <div class="stat-val" id="last-mail">-</div>
+            <div class="stat-total" id="total-mail">ยอดรวม: 0 รายการ</div>
+        </div>
+        <div class="stat-card" style="border-left-color: var(--warning)">
+            <div class="stat-label">เกียรติบัตรล่าสุด</div>
+            <div class="stat-val" id="last-cert">-</div>
+            <div class="stat-total" id="total-cert">ยอดรวม: 0 รายการ</div>
+        </div>
     </div>
 
     <div class="main-layout">
         <div class="card">
-            <h3><i class="fa-solid fa-pen-to-square"></i> จองเลขเอกสาร</h3>
+            <h3 style="margin:0 0 1rem 0; font-size: 1.1rem;"><i class="fa-solid fa-pen-to-square"></i> จองเลขเอกสาร</h3>
             <div class="tab-group">
                 <button class="tab-btn active" onclick="switchType('คำสั่ง', this)">คำสั่ง</button>
                 <button class="tab-btn" onclick="switchType('หนังสือส่ง', this)">หนังสือส่ง</button>
@@ -95,18 +108,29 @@
             </div>
             <div id="dynamic-form"></div>
             <label style="font-size:0.75rem; font-weight:700;">หมายเหตุ</label>
-            <input type="text" id="note" class="form-control" placeholder="ระบุเพิ่มเติม">
-            <button class="btn btn-primary" id="submitBtn" onclick="submitData()">ออกเลขทันที</button>
+            <input type="text" id="note" class="form-control" placeholder="ระบุเพิ่มเติม (ถ้ามี)">
+            <button class="btn btn-primary" onclick="submitData()">
+                <i class="fa-solid fa-check-circle"></i> ออกเลขทันที
+            </button>
         </div>
 
         <div class="card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                <h3 style="margin:0;">ประวัติ (Real-time)</h3>
-                <input type="text" id="search" placeholder="🔍 ค้นหา..." class="form-control" style="width:150px; margin:0; padding:8px" onkeyup="renderTable()">
+            <h3 style="margin:0 0 1rem 0; font-size: 1.1rem;"><i class="fa-solid fa-clock-rotate-left"></i> ประวัติรายการ</h3>
+            
+            <div class="history-filter-group">
+                <button class="filter-btn active" onclick="filterHistory('All', this)">ทั้งหมด (<span id="count-all">0</span>)</button>
+                <button class="filter-btn" onclick="filterHistory('คำสั่ง', this)">คำสั่ง (<span id="count-order">0</span>)</button>
+                <button class="filter-btn" onclick="filterHistory('หนังสือส่ง', this)">หนังสือส่ง (<span id="count-mail">0</span>)</button>
+                <button class="filter-btn" onclick="filterHistory('เกียรติบัตร', this)">เกียรติบัตร (<span id="count-cert">0</span>)</button>
             </div>
+
+            <input type="text" id="search" placeholder="🔍 ค้นหาเลขที่ หรือ ชื่อเรื่อง..." class="form-control" style="margin-bottom: 1rem; padding: 10px;" onkeyup="renderTable()">
+
             <div style="overflow-x: auto;">
                 <table id="dataTable">
-                    <thead><tr><th>เลขที่</th><th>ประเภท/เรื่อง</th><th>จัดการ</th></tr></thead>
+                    <thead>
+                        <tr><th>เลขที่</th><th>ประเภท/เรื่อง</th><th>จัดการ</th></tr>
+                    </thead>
                     <tbody></tbody>
                 </table>
             </div>
@@ -114,22 +138,16 @@
     </div>
 </div>
 
-<button class="admin-fab" onclick="handleAdminAuth()"><i class="fa-solid fa-user-shield"></i></button>
+<button class="admin-fab" onclick="handleAdminAuth()" title="Admin Login">
+    <i class="fa-solid fa-user-shield"></i>
+</button>
 
 <script>
-    // --- Firebase Configuration ---
-    const firebaseConfig = {
-        databaseURL: "https://projecttest-118bb-default-rtdb.asia-southeast1.firebasedatabase.app/"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const database = firebase.database();
-    const docRef = database.ref('documents');
-
     const DEFAULTS = { 'คำสั่ง': 31, 'หนังสือส่ง': 91, 'เกียรติบัตร': 33 };
     const ADMIN_PW = "admin1234";
-    let dbRaw = {}; // เก็บ Raw data จาก Firebase เพื่อใช้จัดการรายตัว
-    let dbArray = []; 
+    let db = JSON.parse(localStorage.getItem('docu_v3')) || [];
     let currentType = 'คำสั่ง';
+    let currentHistoryFilter = 'All';
 
     const fields = {
         'คำสั่ง': [ {id:'sub', l:'เรื่องคำสั่ง'}, {id:'req', l:'หน่วยงานที่ขอ'} ],
@@ -137,20 +155,17 @@
         'เกียรติบัตร': [ {id:'sub', l:'โครงการ'}, {id:'rec', l:'ชื่อผู้รับ'}, {id:'req', l:'หน่วยงาน'} ]
     };
 
-    // --- ดึงข้อมูลแบบ Real-time ---
-    docRef.on('value', (snapshot) => {
-        dbRaw = snapshot.val() || {};
-        // แปลงเป็น Array และใส่ Key ของ Firebase เข้าไปด้วย
-        dbArray = Object.keys(dbRaw).map(key => ({ ...dbRaw[key], firebaseKey: key })).reverse();
-        renderTable();
-    });
-
-    function renderForm() {
-        const container = document.getElementById('dynamic-form');
-        container.innerHTML = fields[currentType].map(f => `
-            <label style="font-size:0.75rem; font-weight:700;">${f.l}</label>
-            <input type="text" id="${f.id}" class="form-control" placeholder="กรอกข้อมูล...">
-        `).join('');
+    function handleAdminAuth() {
+        const body = document.getElementById('body');
+        if (body.classList.contains('is-admin')) {
+            body.classList.remove('is-admin');
+        } else {
+            const pw = prompt("กรุณากรอกรหัสผ่านแอดมิน:");
+            if (pw === ADMIN_PW) {
+                body.classList.add('is-admin');
+                renderTable();
+            } else if (pw !== null) alert('รหัสผ่านไม่ถูกต้อง!');
+        }
     }
 
     function switchType(t, el) {
@@ -160,35 +175,46 @@
         renderForm();
     }
 
-    async function submitData() {
-        const btn = document.getElementById('submitBtn');
-        btn.disabled = true;
-        
+    function filterHistory(type, el) {
+        currentHistoryFilter = type;
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        el.classList.add('active');
+        renderTable();
+    }
+
+    function renderForm() {
+        const container = document.getElementById('dynamic-form');
+        container.innerHTML = fields[currentType].map(f => `
+            <label style="font-size:0.75rem; font-weight:700;">${f.l}</label>
+            <input type="text" id="${f.id}" class="form-control" placeholder="กรอกข้อมูล...">
+        `).join('');
+    }
+
+    function submitData() {
         let data = { 
             id: Date.now(), type: currentType, 
             timestamp: new Date().toLocaleString('th-TH'), 
-            note: document.getElementById('note').value,
-            year: 2569
+            note: document.getElementById('note').value 
         };
 
         for(let f of fields[currentType]) {
             const val = document.getElementById(f.id).value.trim();
-            if(!val) { btn.disabled = false; return alert('กรุณากรอกให้ครบ'); }
+            if(!val) return alert('กรุณากรอกข้อมูลให้ครบถ้วน');
             data[f.id] = val;
         }
 
-        const snapshot = await docRef.once('value');
-        const currentData = snapshot.val() ? Object.values(snapshot.val()) : [];
-        const sameType = currentData.filter(i => i.type === currentType);
+        const sameType = db.filter(i => i.type === currentType);
         const lastNo = sameType.length > 0 ? Math.max(...sameType.map(i => i.no)) : DEFAULTS[currentType];
         data.no = lastNo + 1;
+        data.year = 2569;
 
-        docRef.push(data).then(() => {
-            alert(`จองเลขสำเร็จ: ${currentType === 'หนังสือส่ง' ? data.no : data.no+'/'+data.year}`);
-            document.getElementById('note').value = '';
-            renderForm();
-            btn.disabled = false;
-        });
+        db.unshift(data);
+        localStorage.setItem('docu_v3', JSON.stringify(db));
+        
+        document.getElementById('note').value = '';
+        renderForm();
+        renderTable();
+        alert(`จองเลขสำเร็จ! เลขของคุณคือ: ${currentType === 'หนังสือส่ง' ? data.no : data.no+'/'+data.year}`);
     }
 
     function renderTable() {
@@ -196,109 +222,102 @@
         const search = document.getElementById('search').value.toLowerCase();
         tbody.innerHTML = '';
 
-        // Dashboard Stats
+        // Update Dashboard & Filter Counts
+        const counts = { 'คำสั่ง': 0, 'หนังสือส่ง': 0, 'เกียรติบัตร': 0 };
+        db.forEach(item => counts[item.type]++);
+        
+        document.getElementById('count-all').innerText = db.length;
+        document.getElementById('count-order').innerText = counts['คำสั่ง'];
+        document.getElementById('count-mail').innerText = counts['หนังสือส่ง'];
+        document.getElementById('count-cert').innerText = counts['เกียรติบัตร'];
+
         ['คำสั่ง', 'หนังสือส่ง', 'เกียรติบัตร'].forEach(t => {
-            const items = dbArray.filter(i => i.type === t);
+            const items = db.filter(i => i.type === t);
             const last = items[0];
             const idMap = {'คำสั่ง':'last-order', 'หนังสือส่ง':'last-mail', 'เกียรติบัตร':'last-cert'};
             const totalMap = {'คำสั่ง':'total-order', 'หนังสือส่ง':'total-mail', 'เกียรติบัตร':'total-cert'};
-            document.getElementById(idMap[t]).innerText = last ? (t==='หนังสือส่ง' ? last.no : last.no+'/'+last.year) : DEFAULTS[t]+'/2569';
-            document.getElementById(totalMap[t]).innerText = `ยอดรวม: ${items.length}`;
+            document.getElementById(idMap[t]).innerText = last ? (t==='หนังสือส่ง' ? last.no : last.no+'/'+last.year) : DEFAULTS[t] + (t==='หนังสือส่ง'?'':'/2569');
+            document.getElementById(totalMap[t]).innerText = `ยอดรวม: ${items.length} รายการ`;
         });
 
-        dbArray.filter(i => i.sub.toLowerCase().includes(search) || (i.no+'').includes(search)).forEach(i => {
+        // Filter Data
+        let filtered = db;
+        if (currentHistoryFilter !== 'All') {
+            filtered = db.filter(i => i.type === currentHistoryFilter);
+        }
+        if (search) {
+            filtered = filtered.filter(i => i.sub.toLowerCase().includes(search) || (i.no+'').includes(search));
+        }
+
+        filtered.forEach(i => {
             const badgeClass = i.type === 'คำสั่ง' ? 'bg-order' : (i.type === 'หนังสือส่ง' ? 'bg-mail' : 'bg-cert');
             const displayNo = i.type === 'หนังสือส่ง' ? i.no : `${i.no}/${i.year}`;
-            
             tbody.innerHTML += `
                 <tr>
                     <td data-label="เลขที่"><strong style="color:var(--primary); font-size:1.1rem;">${displayNo}</strong></td>
                     <td data-label="รายละเอียด">
                         <span class="badge ${badgeClass}">${i.type}</span>
-                        <div style="font-weight:700;">${i.sub}</div>
-                        <div style="font-size:0.75rem; color:#94a3b8;">${i.req || i.rec || '-'} | ${i.timestamp}</div>
-                        ${i.note ? `<div style="font-size:0.7rem; color:var(--warning)">*${i.note}</div>` : ''}
+                        <div style="font-weight:700; color:#1e293b; line-height:1.4">${i.sub}</div>
+                        <div style="font-size:0.75rem; color:#94a3b8; margin-top:2px;">
+                            <i class="fa-solid fa-user-tag"></i> ${i.req || i.rec} | <i class="fa-regular fa-clock"></i> ${i.timestamp}
+                        </div>
+                        ${i.note ? `<div style="font-size:0.7rem; color:var(--warning); margin-top:2px;">*${i.note}</div>` : ''}
                     </td>
                     <td data-label="จัดการ">
                         <div class="action-btns">
                             <button class="icon-btn" onclick="copyText('${displayNo}')" title="คัดลอกเลข"><i class="fa-solid fa-copy"></i></button>
-                            <button class="icon-btn admin-only" style="color:var(--primary)" onclick="editItem('${i.firebaseKey}')" title="แก้ไข"><i class="fa-solid fa-pen"></i></button>
-                            <button class="icon-btn admin-only" style="color:var(--danger)" onclick="deleteItem('${i.firebaseKey}')" title="ลบ"><i class="fa-solid fa-trash"></i></button>
+                            <button class="icon-btn admin-only" style="color:var(--danger)" onclick="deleteItem(${i.id})" title="ลบรายการ"><i class="fa-solid fa-trash"></i></button>
                         </div>
                     </td>
-                </tr>`;
+                </tr>
+            `;
         });
     }
 
-    // --- Admin Functions ---
-    function handleAdminAuth() {
-        const body = document.getElementById('body');
-        if (body.classList.contains('is-admin')) {
-            body.classList.remove('is-admin');
-        } else {
-            if (prompt("กรุณากรอกรหัสผ่านแอดมิน:") === ADMIN_PW) {
-                body.classList.add('is-admin');
-                renderTable();
-            } else { alert("รหัสผ่านไม่ถูกต้อง!"); }
-        }
-    }
-
-    function deleteItem(key) {
-        if (confirm("ยืนยันการลบรายการนี้ออกจากฐานข้อมูล Cloud?")) {
-            docRef.child(key).remove()
-                .then(() => alert("ลบสำเร็จ"))
-                .catch(err => alert("เกิดข้อผิดพลาด: " + err));
-        }
-    }
-
-    function editItem(key) {
-        const item = dbRaw[key];
-        const newSub = prompt("แก้ไขชื่อเรื่อง:", item.sub);
-        if (newSub === null) return;
-        
-        const newReq = prompt("แก้ไขหน่วยงาน/ผู้รับ:", item.req || item.rec);
-        const newNote = prompt("แก้ไขหมายเหตุ:", item.note || "");
-
-        const updateData = {
-            sub: newSub,
-            note: newNote
-        };
-        
-        if(item.type === 'เกียรติบัตร') updateData.rec = newReq;
-        else updateData.req = newReq;
-
-        docRef.child(key).update(updateData)
-            .then(() => alert("แก้ไขข้อมูลเรียบร้อย"))
-            .catch(err => alert("เกิดข้อผิดพลาด: " + err));
-    }
-
-    function clearAllData() {
-        if (confirm("🚨 คำเตือน! คุณกำลังลบข้อมูลทั้งหมดในระบบ Cloud") && prompt("พิมพ์ CONFIRM เพื่อยืนยัน") === 'CONFIRM') {
-            docRef.remove();
-        }
-    }
-
     function exportToExcel() {
-        if(dbArray.length === 0) return alert('ไม่มีข้อมูล');
-        let csv = "\uFEFFวันที่,ประเภท,เลขที่,เรื่อง,หน่วยงาน/ผู้รับ,หมายเหตุ\n";
-        dbArray.forEach(i => {
-            const no = i.type === 'หนังสือส่ง' ? i.no : `${i.no}/${i.year}`;
-            csv += `"${i.timestamp}","${i.type}","${no}","${i.sub}","${i.req || i.rec}","${i.note || ''}"\n`;
+        if(db.length === 0) return alert('ไม่มีข้อมูลให้ส่งออก');
+        let csv = "\uFEFFวันที่-เวลา,ประเภท,เลขที่,เรื่อง/โครงการ,ผู้ขอ/ผู้รับ,หมายเหตุ\n";
+        db.forEach(i => {
+            const displayNo = i.type === 'หนังสือส่ง' ? i.no : `${i.no}/${i.year}`;
+            csv += `"${i.timestamp}","${i.type}","${displayNo}","${i.sub}","${i.req || i.rec}","${i.note || ''}"\n`;
         });
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
-        link.download = `docuflow_export_${new Date().toLocaleDateString()}.csv`;
+        link.setAttribute("download", `docuflow_export_${new Date().toLocaleDateString()}.csv`);
         link.click();
     }
 
-    function copyText(txt) { navigator.clipboard.writeText(txt); alert('คัดลอก ' + txt); }
+    function clearAllData() {
+        if(confirm('🚨 คำเตือน: ลบข้อมูลทั้งหมดถาวร?')) {
+            if(prompt("พิมพ์ 'CONFIRM' เพื่อลบ:") === 'CONFIRM') {
+                db = [];
+                localStorage.setItem('docu_v3', JSON.stringify(db));
+                renderTable();
+                alert('ล้างข้อมูลสำเร็จ');
+            }
+        }
+    }
+
+    function deleteItem(id) {
+        if(confirm('ยืนยันการลบรายการนี้?')) {
+            db = db.filter(i => i.id !== id);
+            localStorage.setItem('docu_v3', JSON.stringify(db));
+            renderTable();
+        }
+    }
+
+    function copyText(txt) {
+        navigator.clipboard.writeText(txt);
+        alert('คัดลอกเลข ' + txt + ' แล้ว');
+    }
 
     setInterval(() => {
         document.getElementById('clock').innerHTML = `<i class="fa-regular fa-clock"></i> ` + new Date().toLocaleTimeString('th-TH');
     }, 1000);
 
     renderForm();
+    renderTable();
 </script>
 </body>
 </html>
