@@ -43,14 +43,18 @@
         .admin-fab { position: fixed; bottom: 20px; right: 20px; background: var(--admin-dark); color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 20px rgba(0,0,0,0.3); cursor: pointer; z-index: 999; border: none; font-size: 1.5rem; transition: 0.3s; }
         .admin-only { display: none !important; }
         body.is-admin .admin-only { display: inline-flex !important; }
+        body.is-admin .admin-fab { background: var(--danger); transform: rotate(360deg); }
         @media (max-width: 768px) {
             .main-layout { grid-template-columns: 1fr; }
             .dashboard-grid { grid-template-columns: 1fr; }
             thead { display: none; }
-            tr { display: block; border: 1px solid #e2e8f0; margin-bottom: 1rem; border-radius: 10px; }
-            td { display: block; text-align: left; }
+            tr { display: block; border: 1px solid #e2e8f0; margin-bottom: 1rem; border-radius: 10px; padding: 10px; background: white;}
+            td { display: block; text-align: left; padding: 5px; border: none;}
             td:before { content: attr(data-label); font-weight: bold; display: block; font-size: 0.7rem; color: #94a3b8; }
         }
+        .action-btns { display: flex; gap: 8px; }
+        .icon-btn { cursor: pointer; padding: 8px; border-radius: 8px; background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; font-size: 0.9rem; }
+        .icon-btn:hover { background: #e2e8f0; }
     </style>
 </head>
 <body id="body">
@@ -66,12 +70,12 @@
 <div class="container">
     <div class="admin-panel">
         <div>
-            <strong style="color:var(--danger)"><i class="fa-solid fa-unlock"></i> ADMIN MODE (REAL-TIME)</strong>
-            <div style="font-size: 0.7rem; color: #b91c1c;">ข้อมูลซิงค์ผ่าน Cloud Database</div>
+            <strong style="color:var(--danger)"><i class="fa-solid fa-unlock"></i> ADMIN MODE ACTIVE</strong>
+            <div style="font-size: 0.7rem; color: #b91c1c;">คุณสามารถแก้ไขหรือลบข้อมูลใน Cloud ได้โดยตรง</div>
         </div>
         <div style="display: flex; gap: 10px;">
-            <button class="btn btn-outline" style="background:white; border:1px solid #ddd" onclick="exportToExcel()">Export CSV</button>
-            <button class="btn btn-danger" onclick="clearAllData()">ล้างข้อมูล Cloud</button>
+            <button class="btn btn-outline" style="background:white;" onclick="exportToExcel()"><i class="fa-solid fa-file-excel"></i> Export CSV</button>
+            <button class="btn btn-danger" onclick="clearAllData()"><i class="fa-solid fa-trash-can"></i> ล้าง Cloud</button>
         </div>
     </div>
 
@@ -97,7 +101,7 @@
 
         <div class="card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                <h3 style="margin:0;">ประวัติ (Live)</h3>
+                <h3 style="margin:0;">ประวัติ (Real-time)</h3>
                 <input type="text" id="search" placeholder="🔍 ค้นหา..." class="form-control" style="width:150px; margin:0; padding:8px" onkeyup="renderTable()">
             </div>
             <div style="overflow-x: auto;">
@@ -113,7 +117,7 @@
 <button class="admin-fab" onclick="handleAdminAuth()"><i class="fa-solid fa-user-shield"></i></button>
 
 <script>
-    // --- ตั้งค่า Firebase ---
+    // --- Firebase Configuration ---
     const firebaseConfig = {
         databaseURL: "https://projecttest-118bb-default-rtdb.asia-southeast1.firebasedatabase.app/"
     };
@@ -123,7 +127,8 @@
 
     const DEFAULTS = { 'คำสั่ง': 31, 'หนังสือส่ง': 91, 'เกียรติบัตร': 33 };
     const ADMIN_PW = "admin1234";
-    let db = []; 
+    let dbRaw = {}; // เก็บ Raw data จาก Firebase เพื่อใช้จัดการรายตัว
+    let dbArray = []; 
     let currentType = 'คำสั่ง';
 
     const fields = {
@@ -132,10 +137,11 @@
         'เกียรติบัตร': [ {id:'sub', l:'โครงการ'}, {id:'rec', l:'ชื่อผู้รับ'}, {id:'req', l:'หน่วยงาน'} ]
     };
 
-    // --- ฟังก์ชันดึงข้อมูลแบบ Real-time ---
+    // --- ดึงข้อมูลแบบ Real-time ---
     docRef.on('value', (snapshot) => {
-        const data = snapshot.val();
-        db = data ? Object.values(data).reverse() : [];
+        dbRaw = snapshot.val() || {};
+        // แปลงเป็น Array และใส่ Key ของ Firebase เข้าไปด้วย
+        dbArray = Object.keys(dbRaw).map(key => ({ ...dbRaw[key], firebaseKey: key })).reverse();
         renderTable();
     });
 
@@ -171,14 +177,12 @@
             data[f.id] = val;
         }
 
-        // หาเลขล่าสุดจากฐานข้อมูลโดยตรง
         const snapshot = await docRef.once('value');
-        const currentDb = snapshot.val() ? Object.values(snapshot.val()) : [];
-        const sameType = currentDb.filter(i => i.type === currentType);
+        const currentData = snapshot.val() ? Object.values(snapshot.val()) : [];
+        const sameType = currentData.filter(i => i.type === currentType);
         const lastNo = sameType.length > 0 ? Math.max(...sameType.map(i => i.no)) : DEFAULTS[currentType];
         data.no = lastNo + 1;
 
-        // ส่งขึ้น Firebase
         docRef.push(data).then(() => {
             alert(`จองเลขสำเร็จ: ${currentType === 'หนังสือส่ง' ? data.no : data.no+'/'+data.year}`);
             document.getElementById('note').value = '';
@@ -192,9 +196,9 @@
         const search = document.getElementById('search').value.toLowerCase();
         tbody.innerHTML = '';
 
-        // Update Stats
+        // Dashboard Stats
         ['คำสั่ง', 'หนังสือส่ง', 'เกียรติบัตร'].forEach(t => {
-            const items = db.filter(i => i.type === t);
+            const items = dbArray.filter(i => i.type === t);
             const last = items[0];
             const idMap = {'คำสั่ง':'last-order', 'หนังสือส่ง':'last-mail', 'เกียรติบัตร':'last-cert'};
             const totalMap = {'คำสั่ง':'total-order', 'หนังสือส่ง':'total-mail', 'เกียรติบัตร':'total-cert'};
@@ -202,38 +206,96 @@
             document.getElementById(totalMap[t]).innerText = `ยอดรวม: ${items.length}`;
         });
 
-        db.filter(i => i.sub.toLowerCase().includes(search)).forEach(i => {
+        dbArray.filter(i => i.sub.toLowerCase().includes(search) || (i.no+'').includes(search)).forEach(i => {
             const badgeClass = i.type === 'คำสั่ง' ? 'bg-order' : (i.type === 'หนังสือส่ง' ? 'bg-mail' : 'bg-cert');
             const displayNo = i.type === 'หนังสือส่ง' ? i.no : `${i.no}/${i.year}`;
+            
             tbody.innerHTML += `
                 <tr>
-                    <td data-label="เลขที่"><strong>${displayNo}</strong></td>
+                    <td data-label="เลขที่"><strong style="color:var(--primary); font-size:1.1rem;">${displayNo}</strong></td>
                     <td data-label="รายละเอียด">
                         <span class="badge ${badgeClass}">${i.type}</span>
-                        <div>${i.sub}</div>
-                        <small style="color:#94a3b8">${i.timestamp}</small>
+                        <div style="font-weight:700;">${i.sub}</div>
+                        <div style="font-size:0.75rem; color:#94a3b8;">${i.req || i.rec || '-'} | ${i.timestamp}</div>
+                        ${i.note ? `<div style="font-size:0.7rem; color:var(--warning)">*${i.note}</div>` : ''}
                     </td>
                     <td data-label="จัดการ">
-                        <button class="icon-btn" onclick="copyText('${displayNo}')"><i class="fa-solid fa-copy"></i></button>
+                        <div class="action-btns">
+                            <button class="icon-btn" onclick="copyText('${displayNo}')" title="คัดลอกเลข"><i class="fa-solid fa-copy"></i></button>
+                            <button class="icon-btn admin-only" style="color:var(--primary)" onclick="editItem('${i.firebaseKey}')" title="แก้ไข"><i class="fa-solid fa-pen"></i></button>
+                            <button class="icon-btn admin-only" style="color:var(--danger)" onclick="deleteItem('${i.firebaseKey}')" title="ลบ"><i class="fa-solid fa-trash"></i></button>
+                        </div>
                     </td>
                 </tr>`;
         });
     }
 
+    // --- Admin Functions ---
     function handleAdminAuth() {
         const body = document.getElementById('body');
-        if (body.classList.contains('is-admin')) body.classList.remove('is-admin');
-        else if (prompt("รหัสผ่าน:") === ADMIN_PW) body.classList.add('is-admin');
+        if (body.classList.contains('is-admin')) {
+            body.classList.remove('is-admin');
+        } else {
+            if (prompt("กรุณากรอกรหัสผ่านแอดมิน:") === ADMIN_PW) {
+                body.classList.add('is-admin');
+                renderTable();
+            } else { alert("รหัสผ่านไม่ถูกต้อง!"); }
+        }
+    }
+
+    function deleteItem(key) {
+        if (confirm("ยืนยันการลบรายการนี้ออกจากฐานข้อมูล Cloud?")) {
+            docRef.child(key).remove()
+                .then(() => alert("ลบสำเร็จ"))
+                .catch(err => alert("เกิดข้อผิดพลาด: " + err));
+        }
+    }
+
+    function editItem(key) {
+        const item = dbRaw[key];
+        const newSub = prompt("แก้ไขชื่อเรื่อง:", item.sub);
+        if (newSub === null) return;
+        
+        const newReq = prompt("แก้ไขหน่วยงาน/ผู้รับ:", item.req || item.rec);
+        const newNote = prompt("แก้ไขหมายเหตุ:", item.note || "");
+
+        const updateData = {
+            sub: newSub,
+            note: newNote
+        };
+        
+        if(item.type === 'เกียรติบัตร') updateData.rec = newReq;
+        else updateData.req = newReq;
+
+        docRef.child(key).update(updateData)
+            .then(() => alert("แก้ไขข้อมูลเรียบร้อย"))
+            .catch(err => alert("เกิดข้อผิดพลาด: " + err));
     }
 
     function clearAllData() {
-        if(confirm('ลบข้อมูลทั้งหมดใน Cloud?') && prompt("พิมพ์ CONFIRM") === 'CONFIRM') docRef.remove();
+        if (confirm("🚨 คำเตือน! คุณกำลังลบข้อมูลทั้งหมดในระบบ Cloud") && prompt("พิมพ์ CONFIRM เพื่อยืนยัน") === 'CONFIRM') {
+            docRef.remove();
+        }
+    }
+
+    function exportToExcel() {
+        if(dbArray.length === 0) return alert('ไม่มีข้อมูล');
+        let csv = "\uFEFFวันที่,ประเภท,เลขที่,เรื่อง,หน่วยงาน/ผู้รับ,หมายเหตุ\n";
+        dbArray.forEach(i => {
+            const no = i.type === 'หนังสือส่ง' ? i.no : `${i.no}/${i.year}`;
+            csv += `"${i.timestamp}","${i.type}","${no}","${i.sub}","${i.req || i.rec}","${i.note || ''}"\n`;
+        });
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `docuflow_export_${new Date().toLocaleDateString()}.csv`;
+        link.click();
     }
 
     function copyText(txt) { navigator.clipboard.writeText(txt); alert('คัดลอก ' + txt); }
 
     setInterval(() => {
-        document.getElementById('clock').innerHTML = new Date().toLocaleTimeString('th-TH');
+        document.getElementById('clock').innerHTML = `<i class="fa-regular fa-clock"></i> ` + new Date().toLocaleTimeString('th-TH');
     }, 1000);
 
     renderForm();
