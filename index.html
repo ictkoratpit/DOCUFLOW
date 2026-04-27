@@ -38,13 +38,9 @@
         th { text-align: left; padding: 12px; font-size: 0.75rem; color: #94a3b8; border-bottom: 2px solid #f1f5f9; }
         td { padding: 12px; border-bottom: 1px solid #f1f5f9; }
         .badge { padding: 4px 8px; border-radius: 6px; font-size: 0.65rem; font-weight: 800; display: inline-block; margin-bottom: 5px; }
-        .bg-order { background: #eef2ff; color: #4338ca; }
-        .bg-mail { background: #ecfdf5; color: #047857; }
-        .bg-cert { background: #fffbeb; color: #b45309; }
         .admin-fab { position: fixed; bottom: 20px; right: 20px; background: var(--admin-dark); color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 20px rgba(0,0,0,0.3); cursor: pointer; z-index: 999; border: none; font-size: 1.5rem; transition: 0.3s; }
         .admin-only { display: none !important; }
         body.is-admin .admin-only { display: inline-flex !important; }
-        body.is-admin .admin-fab { background: var(--danger); transform: rotate(360deg); }
         .history-filter-group { display: flex; gap: 5px; background: #f8fafc; padding: 5px; border-radius: 10px; margin-bottom: 1rem; border: 1px solid #e2e8f0; }
         .filter-btn { flex: 1; border: none; background: none; padding: 8px 5px; font-family: 'Sarabun'; font-size: 0.7rem; font-weight: 700; color: #94a3b8; cursor: pointer; border-radius: 6px; }
         .filter-btn.active { background: var(--primary); color: white; }
@@ -56,7 +52,6 @@
             td { display: block; border: none; padding: 5px 10px; text-align: left; }
             td:before { content: attr(data-label); font-weight: 700; color: #94a3b8; font-size: 0.7rem; display: block; margin-bottom: 2px; }
         }
-        .action-btns { display: flex; gap: 8px; }
         .icon-btn { cursor: pointer; padding: 8px; border-radius: 8px; background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; font-size: 0.9rem; }
     </style>
 </head>
@@ -104,12 +99,20 @@
                 <button class="tab-btn" onclick="switchType('หนังสือส่ง', this)">หนังสือส่ง</button>
                 <button class="tab-btn" onclick="switchType('เกียรติบัตร', this)">เกียรติบัตร</button>
             </div>
+            
             <div id="dynamic-form"></div>
+
+            <label style="font-size:0.75rem; font-weight:700;">ชื่อผู้ขอเลข</label>
+            <input type="text" id="requester_name" class="form-control" placeholder="ชื่อ-นามสกุล">
+
+            <label style="font-size:0.75rem; font-weight:700;">ลงวันที่ในเอกสาร</label>
+            <input type="date" id="doc_date" class="form-control">
+
             <label style="font-size:0.75rem; font-weight:700;">หมายเหตุ</label>
             <input type="text" id="note" class="form-control" placeholder="ระบุเพิ่มเติม (ถ้ามี)">
             
-            <label style="font-size:0.75rem; font-weight:700;"><i class="fa-solid fa-paperclip"></i> แนบเอกสาร (ถ้ามี)</label>
-            <input type="file" id="fileInput" class="form-control" style="padding: 8px;">
+            <label style="font-size:0.75rem; font-weight:700;"><i class="fa-solid fa-paperclip"></i> แนบเอกสาร (PDF หรือ รูปภาพ)</label>
+            <input type="file" id="fileInput" class="form-control" style="padding: 8px;" accept="application/pdf,image/*">
 
             <button class="btn btn-primary" id="submitBtn" onclick="submitData()">
                 <i class="fa-solid fa-check-circle"></i> ออกเลขทันที
@@ -127,7 +130,7 @@
             <input type="text" id="search" placeholder="🔍 ค้นหาเลขที่ หรือ ชื่อเรื่อง..." class="form-control" style="margin-bottom: 1rem; padding: 10px;" onkeyup="renderTable()">
             <div style="overflow-x: auto;">
                 <table id="dataTable">
-                    <thead><tr><th>เลขที่</th><th>ประเภท/เรื่อง</th><th>จัดการ</th></tr></thead>
+                    <thead><tr><th>เลขที่</th><th>เรื่อง/ผู้ขอ</th><th>จัดการ</th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
@@ -138,8 +141,7 @@
 <button class="admin-fab" onclick="handleAdminAuth()"><i class="fa-solid fa-user-shield"></i></button>
 
 <script>
-    // --- ตั้งค่า ---
-    const CLOUD_NAME = "dcgjyo3u2"; // ใส่ Cloud Name ของคุณครูที่นี่
+    const CLOUD_NAME = "dcgjyo3u2"; 
     const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/auto/upload`;
     const CLOUDINARY_PRESET = "docuflow_preset";
 
@@ -157,7 +159,31 @@
         'เกียรติบัตร': [ {id:'sub', l:'โครงการ'}, {id:'rec', l:'ชื่อผู้รับ'}, {id:'req', l:'หน่วยงาน'} ]
     };
 
-    docRef.on('value', (s) => { db = s.val() ? Object.values(s.val()).reverse() : []; renderTable(); });
+    // ตั้งค่าวันที่เริ่มต้นเป็นวันนี้
+    document.getElementById('doc_date').valueAsDate = new Date();
+
+    docRef.on('value', (s) => { 
+        db = s.val() ? Object.values(s.val()).reverse() : []; 
+        updateStats();
+        renderTable(); 
+    });
+
+    function updateStats() {
+        const counts = { 'คำสั่ง': 0, 'หนังสือส่ง': 0, 'เกียรติบัตร': 0 };
+        const lasts = { 'คำสั่ง': '-', 'หนังสือส่ง': '-', 'เกียรติบัตร': '-' };
+        
+        [...db].reverse().forEach(i => {
+            counts[i.type]++;
+            lasts[i.type] = `${i.no}/${i.year}`;
+        });
+
+        document.getElementById('total-order').innerText = `ยอดรวม: ${counts['คำสั่ง']} รายการ`;
+        document.getElementById('last-order').innerText = lasts['คำสั่ง'];
+        document.getElementById('total-mail').innerText = `ยอดรวม: ${counts['หนังสือส่ง']} รายการ`;
+        document.getElementById('last-mail').innerText = lasts['หนังสือส่ง'];
+        document.getElementById('total-cert').innerText = `ยอดรวม: ${counts['เกียรติบัตร']} รายการ`;
+        document.getElementById('last-cert').innerText = lasts['เกียรติบัตร'];
+    }
 
     async function uploadFile(file) {
         const fd = new FormData();
@@ -170,40 +196,82 @@
 
     async function submitData() {
         const submitBtn = document.getElementById('submitBtn');
+        const requester = document.getElementById('requester_name').value;
+        const docDate = document.getElementById('doc_date').value;
         const file = document.getElementById('fileInput').files[0];
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังอัปโหลด...';
 
-        let data = { id: Date.now(), type: currentType, timestamp: new Date().toLocaleString('th-TH'), note: document.getElementById('note').value };
+        if(!requester || !docDate) { alert('กรุณาระบุชื่อผู้ขอและวันที่'); return; }
+
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังบันทึก...';
+
+        let data = { 
+            id: Date.now(), 
+            type: currentType, 
+            requester: requester,
+            docDate: docDate,
+            timestamp: new Date().toLocaleString('th-TH'), 
+            note: document.getElementById('note').value 
+        };
+
         for(let f of fields[currentType]) {
             const val = document.getElementById(f.id).value;
             if(!val) { alert('กรอกข้อมูลไม่ครบ'); submitBtn.disabled = false; submitBtn.innerHTML = 'ออกเลขทันที'; return; }
             data[f.id] = val;
         }
 
-        if (file) data.fileUrl = await uploadFile(file);
+        try {
+            if (file) data.fileUrl = await uploadFile(file);
+            const sameType = db.filter(i => i.type === currentType);
+            data.no = (sameType.length > 0 ? Math.max(...sameType.map(i => i.no)) : DEFAULTS[currentType]) + 1;
+            data.year = 2569;
 
-        const sameType = db.filter(i => i.type === currentType);
-        data.no = (sameType.length > 0 ? Math.max(...sameType.map(i => i.no)) : DEFAULTS[currentType]) + 1;
-        data.year = 2569;
-
-        await docRef.push(data);
-        alert('สำเร็จ!');
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = 'ออกเลขทันที';
-        document.getElementById('note').value = '';
-        document.getElementById('fileInput').value = '';
+            await docRef.push(data);
+            alert('ออกเลขสำเร็จ: ' + data.no + '/' + data.year);
+            
+            // ล้างฟอร์ม
+            document.getElementById('note').value = '';
+            document.getElementById('fileInput').value = '';
+            document.getElementById('requester_name').value = '';
+            fields[currentType].forEach(f => document.getElementById(f.id).value = '');
+        } catch (e) {
+            alert('เกิดข้อผิดพลาด');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'ออกเลขทันที';
+        }
     }
 
     function renderTable() {
+        const searchTerm = document.getElementById('search').value.toLowerCase();
         const tbody = document.querySelector('#dataTable tbody');
-        tbody.innerHTML = db.filter(i => (currentHistoryFilter === 'All' || i.type === currentHistoryFilter)).map(i => `
+        
+        const filtered = db.filter(i => {
+            const matchType = currentHistoryFilter === 'All' || i.type === currentHistoryFilter;
+            const matchSearch = i.sub.toLowerCase().includes(searchTerm) || 
+                               (i.no + "/" + i.year).includes(searchTerm) ||
+                               (i.requester && i.requester.toLowerCase().includes(searchTerm));
+            return matchType && matchSearch;
+        });
+
+        tbody.innerHTML = filtered.map(i => `
             <tr>
-                <td data-label="เลขที่"><strong>${i.no}/${i.year}</strong></td>
-                <td data-label="เรื่อง"><strong>${i.sub}</strong><br><small>${i.type}</small></td>
+                <td data-label="เลขที่">
+                    <span class="badge ${i.type === 'คำสั่ง' ? 'bg-order' : (i.type === 'หนังสือส่ง' ? 'bg-mail' : 'bg-cert')}">${i.type}</span><br>
+                    <strong>${i.no}/${i.year}</strong>
+                </td>
+                <td data-label="เรื่อง">
+                    <strong>${i.sub}</strong><br>
+                    <small style="color:#64748b">
+                        <i class="fa-solid fa-user"></i> ${i.requester || 'ไม่ระบุ'} | 
+                        <i class="fa-solid fa-calendar"></i> ${i.docDate || '-'}
+                    </small>
+                </td>
                 <td data-label="จัดการ">
-                    ${i.fileUrl ? `<a href="${i.fileUrl}" target="_blank" class="icon-btn" style="color:var(--success)"><i class="fa-solid fa-file"></i></a>` : ''}
-                    <button class="icon-btn admin-only" onclick="deleteItem(${i.id})"><i class="fa-solid fa-trash"></i></button>
+                    <div class="action-btns">
+                        ${i.fileUrl ? `<a href="${i.fileUrl}" target="_blank" class="icon-btn" style="color:var(--success)"><i class="fa-solid fa-file-pdf"></i></a>` : ''}
+                        <button class="icon-btn admin-only" onclick="deleteItem(${i.id})"><i class="fa-solid fa-trash"></i></button>
+                    </div>
                 </td>
             </tr>
         `).join('');
@@ -211,11 +279,25 @@
 
     function switchType(t, el) { currentType = t; document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); el.classList.add('active'); renderForm(); }
     function filterHistory(type, el) { currentHistoryFilter = type; document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active')); el.classList.add('active'); renderTable(); }
-    function renderForm() { document.getElementById('dynamic-form').innerHTML = fields[currentType].map(f => `<label>${f.l}</label><input type="text" id="${f.id}" class="form-control">`).join(''); }
+    function renderForm() { document.getElementById('dynamic-form').innerHTML = fields[currentType].map(f => `<label style="font-size:0.75rem; font-weight:700;">${f.l}</label><input type="text" id="${f.id}" class="form-control">`).join(''); }
     function handleAdminAuth() { if(prompt("รหัสผ่าน:") === "admin1234") document.getElementById('body').classList.add('is-admin'); }
-    function deleteItem(id) { docRef.orderByChild('id').equalTo(id).once('value', s => s.forEach(c => c.ref.remove())); }
-    function exportToExcel() { /* ใส่ฟังก์ชันเดิมที่คุณครูมี */ }
+    function deleteItem(id) { if(confirm('ยืนยันการลบ?')) docRef.orderByChild('id').equalTo(id).once('value', s => s.forEach(c => c.ref.remove())); }
+    
+    function exportToExcel() {
+        let csv = "\uFEFFเลขที่,ประเภท,เรื่อง,ชื่อผู้ขอ,ลงวันที่,หมายเหตุ,ลิงก์ไฟล์\n";
+        db.forEach(i => {
+            csv += `"${i.no}/${i.year}","${i.type}","${i.sub}","${i.requester || ''}","${i.docDate || ''}","${i.note || ''}","${i.fileUrl || ''}"\n`;
+        });
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.setAttribute("download", `docuflow_export_${new Date().toLocaleDateString()}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
 
+    setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleString('th-TH'); }, 1000);
     renderForm();
 </script>
 </body>
