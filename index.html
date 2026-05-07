@@ -44,6 +44,10 @@
         .history-filter-group { display: flex; gap: 5px; background: #f8fafc; padding: 5px; border-radius: 10px; margin-bottom: 1rem; border: 1px solid #e2e8f0; }
         .filter-btn { flex: 1; border: none; background: none; padding: 8px 5px; font-family: 'Sarabun'; font-size: 0.7rem; font-weight: 700; color: #94a3b8; cursor: pointer; border-radius: 6px; }
         .filter-btn.active { background: var(--primary); color: white; }
+        .bg-order { background: #e0e7ff; color: #4338ca; }
+        .bg-mail { background: #dcfce7; color: #15803d; }
+        .bg-cert { background: #fef3c7; color: #b45309; }
+
         @media (max-width: 768px) {
             .main-layout { grid-template-columns: 1fr; }
             .dashboard-grid { grid-template-columns: 1fr; }
@@ -148,18 +152,27 @@
     const firebaseConfig = { databaseURL: "https://projecttest-118bb-default-rtdb.asia-southeast1.firebasedatabase.app/" };
     firebase.initializeApp(firebaseConfig);
     const docRef = firebase.database().ref('documents');
-    const DEFAULTS = { 'คำสั่ง': 31, 'หนังสือส่ง': 91, 'เกียรติบัตร': 33 };
+    
+    const DEFAULTS = { 'คำสั่ง': 148, 'หนังสือส่ง': 121, 'เกียรติบัตร': 120 };
 
     let db = [];
     let currentType = 'คำสั่ง';
     let currentHistoryFilter = 'All';
+    
     const fields = {
-        'คำสั่ง': [ {id:'sub', l:'เรื่องคำสั่ง'}, {id:'req', l:'หน่วยงานที่ขอ'} ],
-        'หนังสือส่ง': [ {id:'sub', l:'เรื่องหนังสือ'}, {id:'req', l:'ผู้ส่ง'} ],
-        'เกียรติบัตร': [ {id:'sub', l:'โครงการ'}, {id:'rec', l:'ชื่อผู้รับ'}, {id:'req', l:'หน่วยงาน'} ]
+        'คำสั่ง': [ 
+            {id:'sub', l:'เรื่องคำสั่ง'}, 
+            {id:'from_dept', l:'จาก (หน่วยงาน/บุคคล)'}, 
+            {id:'to_dept', l:'ถึง (หน่วยงาน/บุคคล)'} 
+        ],
+        'หนังสือส่ง': [ 
+            {id:'sub', l:'เรื่องหนังสือ'}, 
+            {id:'from_dept', l:'จาก (หน่วยงาน/บุคคล)'}, 
+            {id:'to_dept', l:'ถึง (หน่วยงาน/บุคคล)'} 
+        ],
+        'เกียรติบัตร': [ {id:'sub', l:'โครงการ'}, {id:'rec', l:'ชื่อผู้รับ'}, {id:'req_dept', l:'หน่วยงาน'} ]
     };
 
-    // ตั้งค่าวันที่เริ่มต้นเป็นวันนี้
     document.getElementById('doc_date').valueAsDate = new Date();
 
     docRef.on('value', (s) => { 
@@ -174,7 +187,8 @@
         
         [...db].reverse().forEach(i => {
             counts[i.type]++;
-            lasts[i.type] = `${i.no}/${i.year}`;
+            // ปรับการแสดงผลสถิติล่าสุด (หน้า Dashboard)
+            lasts[i.type] = i.type === 'หนังสือส่ง' ? `${i.no}` : `${i.no}/${i.year}`;
         });
 
         document.getElementById('total-order').innerText = `ยอดรวม: ${counts['คำสั่ง']} รายการ`;
@@ -223,18 +237,23 @@
         try {
             if (file) data.fileUrl = await uploadFile(file);
             const sameType = db.filter(i => i.type === currentType);
-            data.no = (sameType.length > 0 ? Math.max(...sameType.map(i => i.no)) : DEFAULTS[currentType]) + 1;
-            data.year = 2569;
+            
+            let lastNo = sameType.length > 0 ? Math.max(...sameType.map(i => parseInt(i.no) || 0)) : DEFAULTS[currentType];
+            data.no = lastNo + 1;
+            data.year = 69;
 
             await docRef.push(data);
-            alert('ออกเลขสำเร็จ: ' + data.no + '/' + data.year);
             
-            // ล้างฟอร์ม
+            // ปรับ Alert ตอนบันทึกสำเร็จ
+            const displayNo = data.type === 'หนังสือส่ง' ? data.no : `${data.no}/${data.year}`;
+            alert('ออกเลขสำเร็จ: ' + displayNo);
+            
             document.getElementById('note').value = '';
             document.getElementById('fileInput').value = '';
             document.getElementById('requester_name').value = '';
             fields[currentType].forEach(f => document.getElementById(f.id).value = '');
         } catch (e) {
+            console.error(e);
             alert('เกิดข้อผิดพลาด');
         } finally {
             submitBtn.disabled = false;
@@ -248,33 +267,40 @@
         
         const filtered = db.filter(i => {
             const matchType = currentHistoryFilter === 'All' || i.type === currentHistoryFilter;
-            const matchSearch = i.sub.toLowerCase().includes(searchTerm) || 
-                               (i.no + "/" + i.year).includes(searchTerm) ||
+            const fullNoLabel = i.type === 'หนังสือส่ง' ? String(i.no) : (i.no + "/" + i.year);
+            const matchSearch = (i.sub || '').toLowerCase().includes(searchTerm) || 
+                               fullNoLabel.includes(searchTerm) ||
                                (i.requester && i.requester.toLowerCase().includes(searchTerm));
             return matchType && matchSearch;
         });
 
-        tbody.innerHTML = filtered.map(i => `
-            <tr>
-                <td data-label="เลขที่">
-                    <span class="badge ${i.type === 'คำสั่ง' ? 'bg-order' : (i.type === 'หนังสือส่ง' ? 'bg-mail' : 'bg-cert')}">${i.type}</span><br>
-                    <strong>${i.no}/${i.year}</strong>
-                </td>
-                <td data-label="เรื่อง">
-                    <strong>${i.sub}</strong><br>
-                    <small style="color:#64748b">
-                        <i class="fa-solid fa-user"></i> ${i.requester || 'ไม่ระบุ'} | 
-                        <i class="fa-solid fa-calendar"></i> ${i.docDate || '-'}
-                    </small>
-                </td>
-                <td data-label="จัดการ">
-                    <div class="action-btns">
-                        ${i.fileUrl ? `<a href="${i.fileUrl}" target="_blank" class="icon-btn" style="color:var(--success)"><i class="fa-solid fa-file-pdf"></i></a>` : ''}
-                        <button class="icon-btn admin-only" onclick="deleteItem(${i.id})"><i class="fa-solid fa-trash"></i></button>
-                    </div>
-                </td>
-            </tr>
-        `).join('');
+        tbody.innerHTML = filtered.map(i => {
+            // กำหนดการแสดงผลเลขที่ในตาราง
+            const displayFullNo = i.type === 'หนังสือส่ง' ? `ศธ 04306.06/${i.no}` : `${i.no}/${i.year}`;
+            
+            return `
+                <tr>
+                    <td data-label="เลขที่">
+                        <span class="badge ${i.type === 'คำสั่ง' ? 'bg-order' : (i.type === 'หนังสือส่ง' ? 'bg-mail' : 'bg-cert')}">${i.type}</span><br>
+                        <strong>${displayFullNo}</strong>
+                    </td>
+                    <td data-label="เรื่อง">
+                        <strong>${i.sub}</strong><br>
+                        <small style="color:#64748b">
+                            ${(i.from_dept || i.to_dept) ? `จาก: ${i.from_dept || '-'} | ถึง: ${i.to_dept || '-'}<br>` : ''}
+                            <i class="fa-solid fa-user"></i> ผู้ขอ: ${i.requester || 'ไม่ระบุ'} | 
+                            <i class="fa-solid fa-calendar"></i> วันที่เอกสาร: ${i.docDate || '-'}
+                        </small>
+                    </td>
+                    <td data-label="จัดการ">
+                        <div class="action-btns">
+                            ${i.fileUrl ? `<a href="${i.fileUrl}" target="_blank" class="icon-btn" style="color:var(--success)"><i class="fa-solid fa-file-pdf"></i></a>` : ''}
+                            <button class="icon-btn admin-only" onclick="deleteItem(${i.id})"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
     }
 
     function switchType(t, el) { currentType = t; document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); el.classList.add('active'); renderForm(); }
@@ -283,10 +309,18 @@
     function handleAdminAuth() { if(prompt("รหัสผ่าน:") === "admin1234") document.getElementById('body').classList.add('is-admin'); }
     function deleteItem(id) { if(confirm('ยืนยันการลบ?')) docRef.orderByChild('id').equalTo(id).once('value', s => s.forEach(c => c.ref.remove())); }
     
+    function clearAllData() {
+        if(confirm('🚨 คำเตือน: คุณกำลังจะลบข้อมูลทั้งหมดในระบบ! ยืนยันหรือไม่?')) {
+            docRef.remove();
+        }
+    }
+
     function exportToExcel() {
-        let csv = "\uFEFFเลขที่,ประเภท,เรื่อง,ชื่อผู้ขอ,ลงวันที่,หมายเหตุ,ลิงก์ไฟล์\n";
+        let csv = "\uFEFFเลขที่,ประเภท,เรื่อง,จาก,ถึง,ชื่อผู้ขอ,ลงวันที่,หมายเหตุ,ลิงก์ไฟล์\n";
         db.forEach(i => {
-            csv += `"${i.no}/${i.year}","${i.type}","${i.sub}","${i.requester || ''}","${i.docDate || ''}","${i.note || ''}","${i.fileUrl || ''}"\n`;
+            // ปรับเลขที่ในไฟล์ Export
+            const csvNo = i.type === 'หนังสือส่ง' ? i.no : `${i.no}/${i.year}`;
+            csv += `"${csvNo}","${i.type}","${i.sub}","${i.from_dept || ''}","${i.to_dept || ''}","${i.requester || ''}","${i.docDate || ''}","${i.note || ''}","${i.fileUrl || ''}"\n`;
         });
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
