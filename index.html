@@ -99,7 +99,7 @@
                 <button class="tab-btn" onclick="switchType('หนังสือส่ง', this)">หนังสือส่ง</button>
                 <button class="tab-btn" onclick="switchType('เกียรติบัตร', this)">เกียรติบัตร</button>
             </div>
-            
+                        
             <div id="dynamic-form"></div>
             <label style="font-size:0.75rem; font-weight:700;">ชื่อผู้ขอเลข</label>
             <input type="text" id="requester_name" class="form-control" placeholder="ชื่อ-นามสกุล">
@@ -107,7 +107,7 @@
             <input type="date" id="doc_date" class="form-control">
             <label style="font-size:0.75rem; font-weight:700;">หมายเหตุ</label>
             <input type="text" id="note" class="form-control" placeholder="ระบุเพิ่มเติม (ถ้ามี)">
-            
+                        
             <button class="btn btn-primary" id="submitBtn" onclick="submitData()">
                 <i class="fa-solid fa-check-circle"></i> ออกเลขทันที
             </button>
@@ -139,36 +139,40 @@
     const firebaseConfig = { databaseURL: "https://projecttest-118bb-default-rtdb.asia-southeast1.firebasedatabase.app/" };
     firebase.initializeApp(firebaseConfig);
     const docRef = firebase.database().ref('documents');
-    
+        
     const DEFAULTS = { 'คำสั่ง': 148, 'หนังสือส่ง': 121, 'เกียรติบัตร': 156 };
     let db = [];
     let currentType = 'คำสั่ง';
     let currentHistoryFilter = 'All';
-    
-    // อัปเดต fields นำ จาก และ ถึง ออกจากคำสั่ง
+        
     const fields = {
         'คำสั่ง': [ 
-             {id:'sub', l:'เรื่องคำสั่ง'}
-         ],
+             {id:'sub', l:'เรื่องคำสั่ง'} 
+        ],
         'หนังสือส่ง': [ 
              {id:'sub', l:'เรื่องหนังสือ'}, 
              {id:'from_dept', l:'จาก (หน่วยงาน/บุคคล)'}, 
              {id:'to_dept', l:'ถึง (หน่วยงาน/บุคคล)'} 
          ],
-        'เกียรติบัตร': [ {id:'sub', l:'โครงการ'}, {id:'rec', l:'ชื่อผู้รับ'}, {id:'req_dept', l:'หน่วยงาน'} ]
+        'เกียรติบัตร': [ 
+             {id:'sub', l:'โครงการ'}, 
+             {id:'rec', l:'ชื่อผู้รับ (ระบุรายบุคคล หรือ "ตามบัญชีรายชื่อแนบท้าย")'}, 
+             {id:'req_dept', l:'หน่วยงาน'},
+             {id:'qty', l:'จำนวนเลขที่ต้องการจอง (ฉบับ)', type:'number', val:'1'}
+        ]
     };
 
     document.getElementById('doc_date').valueAsDate = new Date();
     docRef.on('value', (s) => { 
          db = s.val() ? Object.values(s.val()).reverse() : []; 
-         updateStats();
-        renderTable(); 
-     });
+         updateStats(); 
+         renderTable(); 
+    });
 
     function updateStats() {
         const counts = { 'คำสั่ง': 0, 'หนังสือส่ง': 0, 'เกียรติบัตร': 0 };
         const lasts = { 'คำสั่ง': '-', 'หนังสือส่ง': '-', 'เกียรติบัตร': '-' };
-        
+                
         [...db].reverse().forEach(i => {
             counts[i.type]++;
             lasts[i.type] = i.type === 'หนังสือส่ง' ? `${i.no}` : `${i.no}/${i.year}`;
@@ -195,20 +199,19 @@
         const submitBtn = document.getElementById('submitBtn');
         const requester = document.getElementById('requester_name').value;
         const docDate = document.getElementById('doc_date').value;
-        
+                
         if(!requester || !docDate) { alert('กรุณาระบุชื่อผู้ขอและวันที่'); return; }
-        
+                
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังบันทึก...';
-        
+                
         let data = { 
-             id: Date.now(), 
              type: currentType, 
-             requester: requester,
-             docDate: docDate,
+             requester: requester, 
+             docDate: docDate, 
              timestamp: new Date().toLocaleString('th-TH'), 
              note: document.getElementById('note').value 
-         };
+        };
 
         for(let f of fields[currentType]) {
             const val = document.getElementById(f.id).value;
@@ -218,18 +221,43 @@
 
         try {
             const sameType = db.filter(i => i.type === currentType);
-            
             let lastNo = sameType.length > 0 ? Math.max(...sameType.map(i => parseInt(i.no) || 0)) : DEFAULTS[currentType];
-            data.no = lastNo + 1;
-            data.year = 69;
-            await docRef.push(data);
             
-            const displayNo = data.type === 'หนังสือส่ง' ? data.no : `${data.no}/${data.year}`;
+            // ตรวจสอบและดึงค่าจำนวนที่ขอจอง (เฉพาะเกียรติบัตร)
+            let qty = 1;
+            if (data.qty) {
+                qty = parseInt(data.qty) || 1;
+                delete data.qty; // ลบออกเพื่อไม่ให้บันทึกฟิลด์ qty ลงในไอเทมเดี่ยวของ Firebase
+            }
+
+            let startNo = lastNo + 1;
+            let endNo = lastNo + qty;
+            const currentYear = 69;
+
+            // ลูปบันทึกข้อมูลตามจำนวนฉบับที่ผู้ใช้ระบุ
+            for (let i = 0; i < qty; i++) {
+                let itemData = { ...data };
+                itemData.id = Date.now() + i; // ป้องกัน ID ซ้ำกันในลูปที่ทำงานเร็ว
+                itemData.no = startNo + i;
+                itemData.year = currentYear;
+                
+                // หากเป็นการจองแบบกลุ่ม ให้ใส่หมายเหตุเลขย่อยระบุไว้ให้ด้วย
+                if (qty > 1) {
+                    itemData.note = (itemData.note ? itemData.note + ' ' : '') + `(ชุดจอง ฉบับที่ ${i + 1}/${qty})`;
+                }
+                
+                await docRef.push(itemData);
+            }
+                        
+            const displayNo = qty > 1 ? `${startNo}/${currentYear} ถึง ${endNo}/${currentYear} (รวม ${qty} ฉบับ)` : (data.type === 'หนังสือส่ง' ? startNo : `${startNo}/${currentYear}`);
             alert('ออกเลขสำเร็จ: ' + displayNo);
-            
+                        
             document.getElementById('note').value = '';
             document.getElementById('requester_name').value = '';
-            fields[currentType].forEach(f => document.getElementById(f.id).value = '');
+            fields[currentType].forEach(f => {
+                const el = document.getElementById(f.id);
+                if (el) el.value = f.val || '';
+            });
         } catch (e) {
             console.error(e);
             alert('เกิดข้อผิดพลาด');
@@ -242,19 +270,19 @@
     function renderTable() {
         const searchTerm = document.getElementById('search').value.toLowerCase();
         const tbody = document.querySelector('#dataTable tbody');
-        
+                
         const filtered = db.filter(i => {
             const matchType = currentHistoryFilter === 'All' || i.type === currentHistoryFilter;
             const fullNoLabel = i.type === 'หนังสือส่ง' ? String(i.no) : (i.no + "/" + i.year);
             const matchSearch = (i.sub || '').toLowerCase().includes(searchTerm) || 
-                               fullNoLabel.includes(searchTerm) ||
+                                fullNoLabel.includes(searchTerm) || 
                                (i.requester && i.requester.toLowerCase().includes(searchTerm));
             return matchType && matchSearch;
         });
 
         tbody.innerHTML = filtered.map(i => {
             const displayFullNo = i.type === 'หนังสือส่ง' ? `ศธ 04306.06/${i.no}` : `${i.no}/${i.year}`;
-            
+                        
             return `
                 <tr>
                     <td data-label="เลขที่">
@@ -267,13 +295,14 @@
                             ${(i.from_dept || i.to_dept) ? `จาก: ${i.from_dept || '-'} | ถึง: ${i.to_dept || '-'}<br>` : ''}
                             <i class="fa-solid fa-user"></i> ผู้ขอ: ${i.requester || 'ไม่ระบุ'} | 
                             <i class="fa-solid fa-calendar"></i> วันที่เอกสาร: ${i.docDate || '-'}
+                            ${i.note ? `<br><i class="fa-solid fa-info-circle"></i> หมายเหตุ: ${i.note}` : ''}
                         </small>
                     </td>
                     <td data-label="จัดการ">
                         <div class="action-btns">
                             ${i.fileUrl ? 
-                                `<a href="${i.fileUrl}" target="_blank" class="icon-btn" style="color:var(--success)"><i class="fa-solid fa-file-pdf"></i></a>` : 
-                                `<label class="icon-btn" style="color:var(--primary); cursor:pointer; margin:0;"><input type="file" accept="application/pdf,image/*" style="display:none;" onchange="handleUploadLater(${i.id}, this)"><i class="fa-solid fa-cloud-arrow-up"></i></label>`
+                                 `<a href="${i.fileUrl}" target="_blank" class="icon-btn" style="color:var(--success)"><i class="fa-solid fa-file-pdf"></i></a>` : 
+                                 `<label class="icon-btn" style="color:var(--primary); cursor:pointer; margin:0;"><input type="file" accept="application/pdf,image/*" style="display:none;" onchange="handleUploadLater(${i.id}, this)"><i class="fa-solid fa-cloud-arrow-up"></i></label>`
                             }
                             <button class="icon-btn admin-only" onclick="deleteItem(${i.id})"><i class="fa-solid fa-trash"></i></button>
                         </div>
@@ -286,10 +315,10 @@
     async function handleUploadLater(id, input) {
         const file = input.files[0];
         if (!file) return;
-        
+                
         const container = input.parentElement;
         container.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-        
+                
         try {
             const fileUrl = await uploadFile(file);
             await docRef.orderByChild('id').equalTo(id).once('value', s => {
@@ -307,10 +336,17 @@
 
     function switchType(t, el) { currentType = t; document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); el.classList.add('active'); renderForm(); }
     function filterHistory(type, el) { currentHistoryFilter = type; document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active')); el.classList.add('active'); renderTable(); }
-    function renderForm() { document.getElementById('dynamic-form').innerHTML = fields[currentType].map(f => `<label style="font-size:0.75rem; font-weight:700;">${f.l}</label><input type="text" id="${f.id}" class="form-control">`).join(''); }
+    
+    function renderForm() { 
+        document.getElementById('dynamic-form').innerHTML = fields[currentType].map(f => `
+            <label style="font-size:0.75rem; font-weight:700;">${f.l}</label>
+            <input type="${f.type || 'text'}" id="${f.id}" class="form-control" value="${f.val || ''}" ${f.type === 'number' ? 'min="1"' : ''}>
+        `).join(''); 
+    }
+    
     function handleAdminAuth() { if(prompt("รหัสผ่าน:") === "admin1234") document.getElementById('body').classList.add('is-admin'); }
     function deleteItem(id) { if(confirm('ยืนยันการลบ?')) docRef.orderByChild('id').equalTo(id).once('value', s => s.forEach(c => c.ref.remove())); }
-    
+        
     function clearAllData() {
         if(confirm('🚨 คำเตือน: คุณกำลังจะลบข้อมูลทั้งหมดในระบบ! ยืนยันหรือไม่?')) {
             docRef.remove();
@@ -323,7 +359,7 @@
             const csvNo = i.type === 'หนังสือส่ง' ? i.no : `${i.no}/${i.year}`;
             csv += `"${csvNo}","${i.type}","${i.sub}","${i.from_dept || ''}","${i.to_dept || ''}","${i.requester || ''}","${i.docDate || ''}","${i.note || ''}","${i.fileUrl || ''}"\n`;
         });
-        
+                
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
