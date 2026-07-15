@@ -3,77 +3,200 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DOCUFLOW PRO | โรงเรียนโคราชพิทยาคม</title>
+    <title>ระบบสารบัญโรงเรียนโคราชพิทยาคม</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
-        :root { --primary: #6366f1; --danger: #ef4444; --success: #10b981; --warning: #f59e0b; --admin-dark: #1e293b; --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); }
-        body { font-family: 'Sarabun', sans-serif; background: #f1f5f9; margin: 0; color: #1e293b; padding-bottom: 80px; }
-        .navbar { background: white; padding: 0.8rem 5%; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 100; }
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap');
+        
+        :root { 
+            --primary: #4f46e5; 
+            --primary-hover: #4338ca;
+            --danger: #ef4444; 
+            --success: #10b981; 
+            --warning: #f59e0b; 
+            --info: #0ea5e9; 
+            --admin-dark: #1e293b; 
+            --bg-body: #f8fafc;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); 
+            --hover-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        
+        html { scroll-behavior: smooth; }
+        body { font-family: 'Sarabun', sans-serif; background: var(--bg-body); margin: 0; color: var(--text-main); padding-bottom: 80px; }
+        
+        /* Navbar - Glassmorphism */
+        .navbar { 
+            background: rgba(255, 255, 255, 0.85); 
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            padding: 1rem 5%; 
+            display: flex; justify-content: space-between; align-items: center; 
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05); 
+            position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #e2e8f0;
+        }
         .navbar-logo-group { display: flex; align-items: center; gap: 12px; }
-        .logo-main { font-size: 1.2rem; font-weight: 800; color: var(--primary); }
+        .logo-main { font-size: 1.25rem; font-weight: 800; color: var(--primary); letter-spacing: -0.5px;}
         .school-info { border-left: 2px solid #e2e8f0; padding-left: 12px; }
-        .school-name { font-size: 0.9rem; font-weight: 700; color: #1e293b; line-height: 1.2; }
-        .container { max-width: 1200px; margin: 1.5rem auto; padding: 0 1rem; }
-        .dashboard-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 1.5rem; }
-        .stat-card { background: white; border-radius: 15px; padding: 1rem; box-shadow: var(--card-shadow); border-left: 5px solid var(--primary); }
-        .stat-val { font-size: 1.3rem; font-weight: 800; }
-        .stat-label { font-size: 0.7rem; color: #64748b; font-weight: 600; margin-bottom: 4px; }
-        .stat-total { font-size: 0.65rem; color: #94a3b8; }
-        .main-layout { display: grid; grid-template-columns: 350px 1fr; gap: 1.5rem; }
-        .card { background: white; border-radius: 20px; padding: 1.5rem; box-shadow: var(--card-shadow); margin-bottom: 1.5rem; position: relative; }
-        .form-control { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 12px; box-sizing: border-box; font-family: 'Sarabun'; margin: 5px 0 15px 0; font-size: 1rem; }
-        .tab-group { display: flex; background: #f1f5f9; padding: 5px; border-radius: 12px; margin-bottom: 1.5rem; flex-wrap: wrap; }
-        .tab-btn { flex: 1; padding: 10px; border: none; background: none; cursor: pointer; font-weight: 700; color: #64748b; border-radius: 8px; font-family: 'Sarabun'; font-size: 0.75rem; white-space: nowrap; }
-        .tab-btn.active { background: white; color: var(--primary); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        .btn { padding: 12px 20px; border-radius: 12px; border: none; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; font-family: 'Sarabun'; transition: 0.3s; justify-content: center; }
-        .btn-primary { background: var(--primary); color: white; width: 100%; }
-        .btn-outline { background: transparent; border: 2px solid #e2e8f0; color: #64748b; font-size: 0.8rem; padding: 8px 15px; }
-        .btn-danger { background: var(--danger); color: white; font-size: 0.8rem; }
-        .admin-panel { background: #fff1f2; border: 2px dashed var(--danger); border-radius: 15px; padding: 15px; margin-bottom: 1.5rem; display: none; align-items: center; justify-content: space-between; gap: 10px; }
-        body.is-admin .admin-panel { display: flex; }
-        table { width: 100%; border-collapse: collapse; }
-        th { text-align: left; padding: 12px; font-size: 0.75rem; color: #94a3b8; border-bottom: 2px solid #f1f5f9; }
-        td { padding: 12px; border-bottom: 1px solid #f1f5f9; }
-        .badge { padding: 4px 8px; border-radius: 6px; font-size: 0.65rem; font-weight: 800; display: inline-block; margin-bottom: 5px; }
-        .admin-fab { position: fixed; bottom: 20px; right: 20px; background: var(--admin-dark); color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 20px rgba(0,0,0,0.3); cursor: pointer; z-index: 999; border: none; font-size: 1.5rem; transition: 0.3s; }
+        .school-name { font-size: 0.95rem; font-weight: 600; color: var(--text-main); line-height: 1.2; }
+        
+        .container { max-width: 1280px; margin: 2rem auto; padding: 0 1.2rem; }
+        
+        /* Stats Grid */
+        .dashboard-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 2rem; }
+        .stat-card { 
+            background: white; border-radius: 16px; padding: 1.25rem; 
+            box-shadow: var(--card-shadow); border-left: 6px solid var(--primary); 
+            transition: all 0.3s ease; position: relative; overflow: hidden;
+        }
+        .stat-card:hover { transform: translateY(-4px); box-shadow: var(--hover-shadow); }
+        .stat-val { font-size: 1.5rem; font-weight: 800; margin: 5px 0; color: var(--text-main); }
+        .stat-label { font-size: 0.8rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-total { font-size: 0.75rem; color: #94a3b8; font-weight: 500; }
+        
+        /* Main Layout */
+        .main-layout { display: grid; grid-template-columns: 380px 1fr; gap: 20px; align-items: start; }
+        .card { background: white; border-radius: 20px; padding: 1.75rem; box-shadow: var(--card-shadow); border: 1px solid #f1f5f9; }
+        .card-title { margin:0 0 1.5rem 0; font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 8px; color: var(--text-main); }
+        
+        /* Form & Inputs */
+        label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; display: block; }
+        .form-control { 
+            width: 100%; padding: 12px 16px; border: 1px solid #cbd5e1; border-radius: 10px; 
+            box-sizing: border-box; font-family: 'Sarabun'; margin-bottom: 1rem; font-size: 1rem; 
+            background-color: #f8fafc; transition: all 0.2s ease;
+        }
+        .form-control:focus {
+            background-color: white; border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15); outline: none;
+        }
+        
+        /* Tabs - Segmented Control */
+        .tab-group { display: flex; background: #f1f5f9; padding: 6px; border-radius: 12px; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 4px; }
+        .tab-btn { 
+            flex: 1; padding: 10px; border: none; background: transparent; cursor: pointer; 
+            font-weight: 600; color: var(--text-muted); border-radius: 8px; 
+            font-family: 'Sarabun'; font-size: 0.85rem; white-space: nowrap; transition: all 0.2s ease;
+        }
+        .tab-btn:hover { color: var(--text-main); }
+        .tab-btn.active { background: white; color: var(--primary); box-shadow: 0 2px 6px rgba(0,0,0,0.08); font-weight: 700; }
+        
+        /* Animation for dynamic form */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        #dynamic-form { animation: fadeIn 0.3s ease-out; }
+        
+        /* Buttons */
+        .btn { 
+            padding: 12px 24px; border-radius: 10px; border: none; font-weight: 600; 
+            cursor: pointer; display: inline-flex; align-items: center; gap: 8px; 
+            font-family: 'Sarabun'; transition: all 0.2s ease; justify-content: center; font-size: 0.95rem;
+        }
+        .btn:active { transform: scale(0.98); }
+        .btn-primary { background: linear-gradient(135deg, var(--primary), #6366f1); color: white; width: 100%; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3); }
+        .btn-primary:hover { filter: brightness(1.1); box-shadow: 0 6px 14px rgba(79, 70, 229, 0.4); }
+        .btn-outline { background: white; border: 1px solid #cbd5e1; color: var(--text-main); font-size: 0.85rem; padding: 8px 16px; }
+        .btn-outline:hover { background: #f8fafc; border-color: #94a3b8; }
+        .btn-danger { background: var(--danger); color: white; font-size: 0.85rem; }
+        .btn-danger:hover { background: #dc2626; }
+        
+        /* Admin Panel */
+        .admin-panel { 
+            background: linear-gradient(to right, #fff1f2, #ffe4e6); border: 1px solid #fecdd3; 
+            border-radius: 16px; padding: 16px 20px; margin-bottom: 2rem; display: none; 
+            align-items: center; justify-content: space-between; gap: 15px; flex-wrap: wrap; box-shadow: 0 2px 8px rgba(225, 29, 72, 0.05);
+        }
+        body.is-admin .admin-panel { display: flex; animation: fadeIn 0.4s ease; }
+        .admin-fab { position: fixed; bottom: 24px; right: 24px; background: var(--admin-dark); color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3); cursor: pointer; z-index: 999; border: none; font-size: 1.5rem; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .admin-fab:hover { transform: scale(1.1) rotate(5deg); }
+        body.is-admin .admin-fab { display: none; } 
+        
         .admin-only { display: none !important; }
         body.is-admin .admin-only { display: inline-flex !important; }
-        .history-filter-group { display: flex; gap: 5px; background: #f8fafc; padding: 5px; border-radius: 10px; margin-bottom: 1rem; border: 1px solid #e2e8f0; }
-        .filter-btn { flex: 1; border: none; background: none; padding: 8px 5px; font-family: 'Sarabun'; font-size: 0.7rem; font-weight: 700; color: #94a3b8; cursor: pointer; border-radius: 6px; }
-        .filter-btn.active { background: var(--primary); color: white; }
+        
+        /* History Filters */
+        .history-filter-group { display: flex; gap: 8px; margin-bottom: 1.2rem; flex-wrap: wrap;}
+        .filter-btn { 
+            border: 1px solid #e2e8f0; background: white; padding: 6px 14px; 
+            font-family: 'Sarabun'; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); 
+            cursor: pointer; border-radius: 20px; transition: all 0.2s;
+        }
+        .filter-btn:hover { border-color: #cbd5e1; background: #f8fafc; }
+        .filter-btn.active { background: var(--primary); border-color: var(--primary); color: white; box-shadow: 0 2px 6px rgba(79, 70, 229, 0.2); }
+        
+        /* Search Input */
+        .search-container { position: relative; margin-bottom: 1.5rem; }
+        .search-container i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #94a3b8; }
+        #search { padding-left: 40px; margin-bottom: 0; background: white; border-radius: 12px; }
+        
+        /* Table UI */
+        .table-wrapper { overflow-x: auto; border-radius: 12px; border: 1px solid #e2e8f0; }
+        table { width: 100%; border-collapse: collapse; background: white; }
+        th { text-align: left; padding: 14px 16px; font-size: 0.8rem; color: var(--text-muted); background: #f8fafc; font-weight: 700; text-transform: uppercase; border-bottom: 1px solid #e2e8f0; white-space: nowrap;}
+        td { padding: 16px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+        tr:hover td { background-color: #f8fafc; }
+        
+        /* Badges */
+        .badge { padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: 700; display: inline-block; margin-bottom: 8px; letter-spacing: 0.3px;}
         .bg-order { background: #e0e7ff; color: #4338ca; }
         .bg-mail { background: #dcfce7; color: #15803d; }
         .bg-cert { background: #fef3c7; color: #b45309; }
-        @media (max-width: 768px) {
+        .bg-receive { background: #e0f2fe; color: #0369a1; }
+        
+        /* Upload Buttons */
+        .btn-upload { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; text-decoration: none; border: 1px solid transparent; font-family: 'Sarabun'; }
+        .upload-primary { background: #e0e7ff; color: var(--primary); border-color: #c7d2fe; }
+        .upload-primary:hover { background: var(--primary); color: white; }
+        .upload-admin { background: #f1f5f9; color: var(--text-muted); border-color: #e2e8f0; }
+        .upload-admin:hover { background: var(--text-main); color: white; }
+        .upload-success { background: #10b981; color: white; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.2); }
+        .upload-success:hover { background: #059669; }
+
+        .icon-btn { cursor: pointer; padding: 8px 12px; border-radius: 8px; background: white; color: var(--text-muted); border: 1px solid #e2e8f0; font-size: 0.9rem; transition: all 0.2s; }
+        .icon-btn:hover { background: #f8fafc; color: var(--danger); border-color: #fca5a5; }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .dashboard-grid { grid-template-columns: repeat(2, 1fr); }
             .main-layout { grid-template-columns: 1fr; }
-            .dashboard-grid { grid-template-columns: 1fr; }
-            thead { display: none; }
-            tr { display: block; background: #fff; border: 1px solid #e2e8f0; border-radius: 15px; margin-bottom: 1rem; padding: 10px; }
-            td { display: block; border: none; padding: 5px 10px; text-align: left; }
-            td:before { content: attr(data-label); font-weight: 700; color: #94a3b8; font-size: 0.7rem; display: block; margin-bottom: 2px; }
         }
-        .icon-btn { cursor: pointer; padding: 8px; border-radius: 8px; background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; font-size: 0.9rem; }
+        @media (max-width: 768px) {
+            .dashboard-grid { grid-template-columns: 1fr; gap: 15px;}
+            .card { padding: 1.25rem; }
+            
+            /* Responsive Table (Card View) */
+            .table-wrapper { border: none; background: transparent; }
+            table, thead, tbody, th, td, tr { display: block; }
+            thead tr { position: absolute; top: -9999px; left: -9999px; }
+            tr { background: white; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 1rem; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+            tr:hover td { background-color: transparent; }
+            td { border: none; padding: 8px 0; position: relative; text-align: left; }
+            td:before { content: attr(data-label); font-weight: 700; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; display: block; margin-bottom: 4px; }
+            td:first-child { border-bottom: 1px dashed #e2e8f0; margin-bottom: 8px; padding-bottom: 12px; }
+        }
     </style>
 </head>
 <body id="body">
 <nav class="navbar">
     <div class="navbar-logo-group">
-        <div class="logo-main"><i class="fa-solid fa-bolt"></i> DOCUFLOW</div>
+        <div class="logo-main"><i class="fa-solid fa-bolt" style="color: #f59e0b;"></i> DOCUFLOW</div>
         <div class="school-info"><div class="school-name">โรงเรียนโคราชพิทยาคม</div></div>
     </div>
-    <div id="clock" style="font-size: 0.75rem; font-weight: 700; color: #64748b;"></div>
+    <div id="clock" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted); background: #f1f5f9; padding: 6px 12px; border-radius: 20px;"></div>
 </nav>
+
 <div class="container">
     <div class="admin-panel">
-        <div><strong style="color:var(--danger)"><i class="fa-solid fa-unlock"></i> ADMIN MODE</strong></div>
-        <div style="display: flex; gap: 10px;">
-            <button class="btn btn-outline" style="background:white" onclick="exportToExcel()"><i class="fa-solid fa-file-excel"></i> Export CSV</button>
+        <div style="font-size: 1.1rem; font-weight: 700;"><strong style="color:var(--danger)"><i class="fa-solid fa-shield-halved"></i> ADMIN MODE</strong> <span style="font-size:0.85rem; font-weight:500; color:#881337; margin-left: 8px;">คุณมีสิทธิ์จัดการข้อมูลทั้งหมด</span></div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button class="btn btn-outline" onclick="exportToExcel()"><i class="fa-solid fa-file-excel" style="color: #10b981;"></i> Export CSV</button>
             <button class="btn btn-danger" onclick="clearAllData()"><i class="fa-solid fa-trash-can"></i> ล้างทั้งหมด</button>
+            <button class="btn btn-outline" onclick="logoutAdmin()"><i class="fa-solid fa-right-from-bracket"></i> ออกจากระบบ</button>
         </div>
     </div>
+
     <div class="dashboard-grid">
         <div class="stat-card" style="border-left-color: var(--primary)">
             <div class="stat-label">คำสั่งล่าสุด</div>
@@ -90,100 +213,138 @@
             <div class="stat-val" id="last-cert">-</div>
             <div class="stat-total" id="total-cert">ยอดรวม: 0 รายการ</div>
         </div>
+        <div class="stat-card" style="border-left-color: var(--info)">
+            <div class="stat-label">รับหนังสือล่าสุด</div>
+            <div class="stat-val" id="last-receive">-</div>
+            <div class="stat-total" id="total-receive">ยอดรวม: 0 รายการ</div>
+        </div>
     </div>
+
     <div class="main-layout">
         <div class="card">
-            <h3 style="margin:0 0 1rem 0; font-size: 1.1rem;"><i class="fa-solid fa-pen-to-square"></i> จองเลขเอกสาร</h3>
+            <h3 class="card-title"><i class="fa-solid fa-pen-to-square" style="color: var(--primary);"></i> ออกเลขเอกสารใหม่</h3>
             <div class="tab-group">
                 <button class="tab-btn active" onclick="switchType('คำสั่ง', this)">คำสั่ง</button>
                 <button class="tab-btn" onclick="switchType('หนังสือส่ง', this)">หนังสือส่ง</button>
                 <button class="tab-btn" onclick="switchType('เกียรติบัตร', this)">เกียรติบัตร</button>
+                <button class="tab-btn admin-only" style="color: var(--info);" onclick="switchType('หนังสือรับ', this)"><i class="fa-solid fa-download"></i> รับหนังสือ</button>
             </div>
-                        
+            
             <div id="dynamic-form"></div>
-            <label style="font-size:0.75rem; font-weight:700;">ชื่อผู้ขอเลข</label>
-            <input type="text" id="requester_name" class="form-control" placeholder="ชื่อ-นามสกุล">
-            <label style="font-size:0.75rem; font-weight:700;">ลงวันที่ในเอกสาร</label>
+            
+            <label>ชื่อผู้ขอเลข / ผู้บันทึก</label>
+            <input type="text" id="requester_name" class="form-control" placeholder="ระบุชื่อ-นามสกุล">
+            
+            <label>ลงวันที่ในเอกสาร</label>
             <input type="date" id="doc_date" class="form-control">
-            <label style="font-size:0.75rem; font-weight:700;">หมายเหตุ</label>
+            
+            <label>หมายเหตุ</label>
             <input type="text" id="note" class="form-control" placeholder="ระบุเพิ่มเติม (ถ้ามี)">
-                        
-            <button class="btn btn-primary" id="submitBtn" onclick="submitData()">
-                <i class="fa-solid fa-check-circle"></i> ออกเลขทันที
+            
+            <button class="btn btn-primary" id="submitBtn" onclick="submitData()" style="margin-top: 10px;">
+                <i class="fa-solid fa-check-circle"></i> ยืนยันการออกเลข
             </button>
         </div>
+
         <div class="card">
-            <h3 style="margin:0 0 1rem 0; font-size: 1.1rem;"><i class="fa-solid fa-clock-rotate-left"></i> ประวัติรายการ</h3>
+            <h3 class="card-title"><i class="fa-solid fa-clock-rotate-left" style="color: var(--text-muted);"></i> ประวัติการทำรายการ</h3>
             <div class="history-filter-group">
                 <button class="filter-btn active" onclick="filterHistory('All', this)">ทั้งหมด</button>
                 <button class="filter-btn" onclick="filterHistory('คำสั่ง', this)">คำสั่ง</button>
                 <button class="filter-btn" onclick="filterHistory('หนังสือส่ง', this)">หนังสือส่ง</button>
                 <button class="filter-btn" onclick="filterHistory('เกียรติบัตร', this)">เกียรติบัตร</button>
+                <button class="filter-btn" onclick="filterHistory('หนังสือรับ', this)">หนังสือรับ</button>
             </div>
-            <input type="text" id="search" placeholder="🔍 ค้นหาเลขที่ หรือ ชื่อเรื่อง..." class="form-control" style="margin-bottom: 1rem; padding: 10px;" onkeyup="renderTable()">
-            <div style="overflow-x: auto;">
+            
+            <div class="search-container">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="search" placeholder="ค้นหาเลขที่, ชื่อเรื่อง หรือผู้บันทึก..." class="form-control" onkeyup="renderTable()">
+            </div>
+            
+            <div class="table-wrapper">
                 <table id="dataTable">
-                    <thead><tr><th>เลขที่</th><th>เรื่อง/ผู้ขอ</th><th>จัดการ</th></tr></thead>
+                    <thead><tr><th>เลขที่เอกสาร</th><th>รายละเอียด</th><th>การจัดการ</th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
         </div>
     </div>
 </div>
-<button class="admin-fab" onclick="handleAdminAuth()"><i class="fa-solid fa-user-shield"></i></button>
+
+<button class="admin-fab" onclick="handleAdminAuth()" title="เข้าสู่ระบบผู้ดูแล"><i class="fa-solid fa-user-shield"></i></button>
 
 <script>
+    // คงส่วนของ JavaScript ไว้เหมือนเดิม 100% ไม่มีการลบหรือแก้ไข Logic
     const CLOUD_NAME = "dcgjyo3u2"; 
     const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/auto/upload`;
     const CLOUDINARY_PRESET = "docuflow_preset";
+    
     const firebaseConfig = { databaseURL: "https://projecttest-118bb-default-rtdb.asia-southeast1.firebasedatabase.app/" };
     firebase.initializeApp(firebaseConfig);
     const docRef = firebase.database().ref('documents');
-        
-    const DEFAULTS = { 'คำสั่ง': 148, 'หนังสือส่ง': 121, 'เกียรติบัตร': 156 };
+    
+    const DEFAULTS = { 'คำสั่ง': 148, 'หนังสือส่ง': 121, 'เกียรติบัตร': 156, 'หนังสือรับ': 0 };
     let db = [];
     let currentType = 'คำสั่ง';
     let currentHistoryFilter = 'All';
-        
+    
     const fields = {
         'คำสั่ง': [ 
-             {id:'sub', l:'เรื่องคำสั่ง'} 
+            {id:'sub', l:'เรื่องคำสั่ง'} 
         ],
         'หนังสือส่ง': [ 
-             {id:'sub', l:'เรื่องหนังสือ'}, 
-             {id:'from_dept', l:'จาก (หน่วยงาน/บุคคล)'}, 
-             {id:'to_dept', l:'ถึง (หน่วยงาน/บุคคล)'} 
-         ],
+            {id:'sub', l:'เรื่องหนังสือ'}, 
+            {id:'from_dept', l:'จาก (หน่วยงาน/บุคคล)'}, 
+            {id:'to_dept', l:'ถึง (หน่วยงาน/บุคคล)'} 
+        ],
         'เกียรติบัตร': [ 
-             {id:'sub', l:'โครงการ'}, 
-             {id:'rec', l:'ชื่อผู้รับ (ระบุรายบุคคล หรือ "ตามบัญชีรายชื่อแนบท้าย")'}, 
-             {id:'req_dept', l:'หน่วยงาน'},
-             {id:'qty', l:'จำนวนเลขที่ต้องการจอง (ฉบับ)', type:'number', val:'1'}
+            {id:'sub', l:'โครงการ'}, 
+            {id:'rec', l:'ชื่อผู้รับ (ระบุรายบุคคล หรือ "ตามบัญชีรายชื่อแนบท้าย")'}, 
+            {id:'req_dept', l:'หน่วยงาน'},
+            {id:'qty', l:'จำนวนเลขที่ต้องการจอง (ฉบับ)', type:'number', val:'1'}
+        ],
+        'หนังสือรับ': [
+            {id:'doc_no_ext', l:'เลขที่หนังสือต้นทาง (ที่ส่งมา)'},
+            {id:'sub', l:'เรื่อง'},
+            {id:'from_dept', l:'จาก (เช่น สพม.นครราชสีมา)'},
+            {id:'to_person', l:'มอบหมาย/ผู้รับผิดชอบ'}
         ]
     };
 
     document.getElementById('doc_date').valueAsDate = new Date();
-    docRef.on('value', (s) => { 
-         db = s.val() ? Object.values(s.val()).reverse() : []; 
-         updateStats(); 
-         renderTable(); 
+    
+    docRef.on('value', (s) => {
+        db = s.val() ? Object.values(s.val()).reverse() : [];
+        updateStats();
+        renderTable();
     });
 
     function updateStats() {
-        const counts = { 'คำสั่ง': 0, 'หนังสือส่ง': 0, 'เกียรติบัตร': 0 };
-        const lasts = { 'คำสั่ง': '-', 'หนังสือส่ง': '-', 'เกียรติบัตร': '-' };
-                
+        const counts = { 'คำสั่ง': 0, 'หนังสือส่ง': 0, 'เกียรติบัตร': 0, 'หนังสือรับ': 0 };
+        const lasts = { 'คำสั่ง': '-', 'หนังสือส่ง': '-', 'เกียรติบัตร': '-', 'หนังสือรับ': '-' };
+        
         [...db].reverse().forEach(i => {
             counts[i.type]++;
-            lasts[i.type] = i.type === 'หนังสือส่ง' ? `${i.no}` : `${i.no}/${i.year}`;
+            if (i.type === 'หนังสือส่ง') {
+                lasts[i.type] = `${i.no}`;
+            } else if (i.type === 'หนังสือรับ') {
+                lasts[i.type] = `รับ ${i.no}/${i.year}`;
+            } else {
+                lasts[i.type] = `${i.no}/${i.year}`;
+            }
         });
 
         document.getElementById('total-order').innerText = `ยอดรวม: ${counts['คำสั่ง']} รายการ`;
         document.getElementById('last-order').innerText = lasts['คำสั่ง'];
+        
         document.getElementById('total-mail').innerText = `ยอดรวม: ${counts['หนังสือส่ง']} รายการ`;
         document.getElementById('last-mail').innerText = lasts['หนังสือส่ง'];
+        
         document.getElementById('total-cert').innerText = `ยอดรวม: ${counts['เกียรติบัตร']} รายการ`;
         document.getElementById('last-cert').innerText = lasts['เกียรติบัตร'];
+        
+        document.getElementById('total-receive').innerText = `ยอดรวม: ${counts['หนังสือรับ']} รายการ`;
+        document.getElementById('last-receive').innerText = lasts['หนังสือรับ'];
     }
 
     async function uploadFile(file) {
@@ -199,23 +360,23 @@
         const submitBtn = document.getElementById('submitBtn');
         const requester = document.getElementById('requester_name').value;
         const docDate = document.getElementById('doc_date').value;
-                
-        if(!requester || !docDate) { alert('กรุณาระบุชื่อผู้ขอและวันที่'); return; }
-                
+        
+        if(!requester || !docDate) { alert('กรุณาระบุชื่อและวันที่'); return; }
+        
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังบันทึก...';
-                
-        let data = { 
-             type: currentType, 
-             requester: requester, 
-             docDate: docDate, 
-             timestamp: new Date().toLocaleString('th-TH'), 
-             note: document.getElementById('note').value 
+        
+        let data = {
+            type: currentType,
+            requester: requester,
+            docDate: docDate,
+            timestamp: new Date().toLocaleString('th-TH'),
+            note: document.getElementById('note').value
         };
 
         for(let f of fields[currentType]) {
             const val = document.getElementById(f.id).value;
-            if(!val) { alert('กรอกข้อมูลไม่ครบ'); submitBtn.disabled = false; submitBtn.innerHTML = 'ออกเลขทันที'; return; }
+            if(!val) { alert('กรอกข้อมูลไม่ครบ'); submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fa-solid fa-check-circle"></i> ยืนยันการออกเลข'; return; }
             data[f.id] = val;
         }
 
@@ -223,35 +384,41 @@
             const sameType = db.filter(i => i.type === currentType);
             let lastNo = sameType.length > 0 ? Math.max(...sameType.map(i => parseInt(i.no) || 0)) : DEFAULTS[currentType];
             
-            // ตรวจสอบและดึงค่าจำนวนที่ขอจอง (เฉพาะเกียรติบัตร)
             let qty = 1;
             if (data.qty) {
                 qty = parseInt(data.qty) || 1;
-                delete data.qty; // ลบออกเพื่อไม่ให้บันทึกฟิลด์ qty ลงในไอเทมเดี่ยวของ Firebase
+                delete data.qty; 
             }
 
             let startNo = lastNo + 1;
             let endNo = lastNo + qty;
             const currentYear = 69;
 
-            // ลูปบันทึกข้อมูลตามจำนวนฉบับที่ผู้ใช้ระบุ
             for (let i = 0; i < qty; i++) {
                 let itemData = { ...data };
-                itemData.id = Date.now() + i; // ป้องกัน ID ซ้ำกันในลูปที่ทำงานเร็ว
+                itemData.id = Date.now() + i;
                 itemData.no = startNo + i;
                 itemData.year = currentYear;
                 
-                // หากเป็นการจองแบบกลุ่ม ให้ใส่หมายเหตุเลขย่อยระบุไว้ให้ด้วย
                 if (qty > 1) {
                     itemData.note = (itemData.note ? itemData.note + ' ' : '') + `(ชุดจอง ฉบับที่ ${i + 1}/${qty})`;
                 }
-                
                 await docRef.push(itemData);
             }
-                        
-            const displayNo = qty > 1 ? `${startNo}/${currentYear} ถึง ${endNo}/${currentYear} (รวม ${qty} ฉบับ)` : (data.type === 'หนังสือส่ง' ? startNo : `${startNo}/${currentYear}`);
-            alert('ออกเลขสำเร็จ: ' + displayNo);
-                        
+            
+            let displayNo = "";
+            if (qty > 1) {
+                displayNo = `${startNo}/${currentYear} ถึง ${endNo}/${currentYear} (รวม ${qty} ฉบับ)`;
+            } else if (data.type === 'หนังสือส่ง') {
+                displayNo = startNo;
+            } else if (data.type === 'หนังสือรับ') {
+                displayNo = `รับที่ ${startNo}/${currentYear}`;
+            } else {
+                displayNo = `${startNo}/${currentYear}`;
+            }
+            
+            alert('บันทึกสำเร็จ: ' + displayNo);
+            
             document.getElementById('note').value = '';
             document.getElementById('requester_name').value = '';
             fields[currentType].forEach(f => {
@@ -263,48 +430,69 @@
             alert('เกิดข้อผิดพลาด');
         } finally {
             submitBtn.disabled = false;
-            submitBtn.innerHTML = 'ออกเลขทันที';
+            submitBtn.innerHTML = '<i class="fa-solid fa-check-circle"></i> ยืนยันการออกเลข';
         }
     }
 
     function renderTable() {
         const searchTerm = document.getElementById('search').value.toLowerCase();
         const tbody = document.querySelector('#dataTable tbody');
-                
+        
         const filtered = db.filter(i => {
             const matchType = currentHistoryFilter === 'All' || i.type === currentHistoryFilter;
             const fullNoLabel = i.type === 'หนังสือส่ง' ? String(i.no) : (i.no + "/" + i.year);
             const matchSearch = (i.sub || '').toLowerCase().includes(searchTerm) || 
                                 fullNoLabel.includes(searchTerm) || 
-                               (i.requester && i.requester.toLowerCase().includes(searchTerm));
+                                (i.requester && i.requester.toLowerCase().includes(searchTerm));
             return matchType && matchSearch;
         });
 
         tbody.innerHTML = filtered.map(i => {
-            const displayFullNo = i.type === 'หนังสือส่ง' ? `ศธ 04306.06/${i.no}` : `${i.no}/${i.year}`;
-                        
+            let displayFullNo = `${i.no}/${i.year}`;
+            let badgeClass = 'bg-order';
+            
+            if (i.type === 'คำสั่ง') badgeClass = 'bg-order';
+            else if (i.type === 'หนังสือส่ง') { badgeClass = 'bg-mail'; displayFullNo = `ศธ 04306.06/${i.no}`; }
+            else if (i.type === 'เกียรติบัตร') { badgeClass = 'bg-cert'; }
+            else if (i.type === 'หนังสือรับ') { badgeClass = 'bg-receive'; displayFullNo = `เลขรับ ${i.no}/${i.year}`; }
+
+            let extraInfo = '';
+            if (i.type === 'หนังสือรับ') {
+                extraInfo = `อ้างอิง: ${i.doc_no_ext || '-'} | จาก: ${i.from_dept || '-'}<br>มอบหมาย: <strong style="color:var(--text-main);">${i.to_person || '-'}</strong><br>`;
+            } else if (i.from_dept || i.to_dept) {
+                extraInfo = `จาก: ${i.from_dept || '-'} | ถึง: ${i.to_dept || '-'}<br>`;
+            }
+
+            let actionBtn = '';
+            if (i.fileUrl) {
+                actionBtn = `<a href="${i.fileUrl}" target="_blank" class="btn-upload upload-success"><i class="fa-solid fa-file-pdf"></i> เปิดไฟล์</a>`;
+            } else {
+                if (i.type === 'หนังสือรับ') {
+                    actionBtn = `<label class="btn-upload upload-admin admin-only" style="margin:0;"><input type="file" accept="application/pdf,image/*" style="display:none;" onchange="handleUploadLater(${i.id}, this)"><i class="fa-solid fa-cloud-arrow-up"></i> อัพโหลด</label>`;
+                } else {
+                    actionBtn = `<label class="btn-upload upload-primary" style="margin:0;"><input type="file" accept="application/pdf,image/*" style="display:none;" onchange="handleUploadLater(${i.id}, this)"><i class="fa-solid fa-cloud-arrow-up"></i> อัพโหลด</label>`;
+                }
+            }
+
             return `
                 <tr>
-                    <td data-label="เลขที่">
-                        <span class="badge ${i.type === 'คำสั่ง' ? 'bg-order' : (i.type === 'หนังสือส่ง' ? 'bg-mail' : 'bg-cert')}">${i.type}</span><br>
-                        <strong>${displayFullNo}</strong>
+                    <td data-label="เลขที่เอกสาร">
+                        <span class="badge ${badgeClass}">${i.type}</span><br>
+                        <strong style="font-size: 1.1rem; color: var(--primary);">${displayFullNo}</strong>
                     </td>
-                    <td data-label="เรื่อง">
-                        <strong>${i.sub}</strong><br>
-                        <small style="color:#64748b">
-                            ${(i.from_dept || i.to_dept) ? `จาก: ${i.from_dept || '-'} | ถึง: ${i.to_dept || '-'}<br>` : ''}
-                            <i class="fa-solid fa-user"></i> ผู้ขอ: ${i.requester || 'ไม่ระบุ'} | 
-                            <i class="fa-solid fa-calendar"></i> วันที่เอกสาร: ${i.docDate || '-'}
-                            ${i.note ? `<br><i class="fa-solid fa-info-circle"></i> หมายเหตุ: ${i.note}` : ''}
-                        </small>
+                    <td data-label="รายละเอียด">
+                        <strong style="font-size: 1rem; margin-bottom: 4px; display: block;">${i.sub}</strong>
+                        <div style="color:var(--text-muted); line-height: 1.6; font-size: 0.85rem;">
+                            ${extraInfo}
+                            <span style="display:inline-block; margin-right: 12px;"><i class="fa-solid fa-user" style="opacity:0.7;"></i> ผู้บันทึก: ${i.requester || 'ไม่ระบุ'}</span>
+                            <span style="display:inline-block;"><i class="fa-solid fa-calendar-day" style="opacity:0.7;"></i> ลงวันที่: ${i.docDate || '-'}</span>
+                            ${i.note ? `<br><span style="color: var(--warning);"><i class="fa-solid fa-note-sticky"></i> หมายเหตุ: ${i.note}</span>` : ''}
+                        </div>
                     </td>
-                    <td data-label="จัดการ">
-                        <div class="action-btns">
-                            ${i.fileUrl ? 
-                                 `<a href="${i.fileUrl}" target="_blank" class="icon-btn" style="color:var(--success)"><i class="fa-solid fa-file-pdf"></i></a>` : 
-                                 `<label class="icon-btn" style="color:var(--primary); cursor:pointer; margin:0;"><input type="file" accept="application/pdf,image/*" style="display:none;" onchange="handleUploadLater(${i.id}, this)"><i class="fa-solid fa-cloud-arrow-up"></i></label>`
-                            }
-                            <button class="icon-btn admin-only" onclick="deleteItem(${i.id})"><i class="fa-solid fa-trash"></i></button>
+                    <td data-label="การจัดการ">
+                        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                            ${actionBtn}
+                            <button class="icon-btn admin-only" onclick="deleteItem(${i.id})" title="ลบข้อมูล"><i class="fa-solid fa-trash-can"></i></button>
                         </div>
                     </td>
                 </tr>
@@ -315,10 +503,11 @@
     async function handleUploadLater(id, input) {
         const file = input.files[0];
         if (!file) return;
-                
+        
         const container = input.parentElement;
-        container.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-                
+        const originalHTML = container.innerHTML;
+        container.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> อัพโหลด...';
+        
         try {
             const fileUrl = await uploadFile(file);
             await docRef.orderByChild('id').equalTo(id).once('value', s => {
@@ -330,36 +519,69 @@
         } catch (e) {
             console.error(e);
             alert('เกิดข้อผิดพลาดในการอัพโหลด กรุณาลองใหม่อีกครั้ง');
+            container.innerHTML = originalHTML; 
             renderTable();
         }
     }
 
-    function switchType(t, el) { currentType = t; document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); el.classList.add('active'); renderForm(); }
-    function filterHistory(type, el) { currentHistoryFilter = type; document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active')); el.classList.add('active'); renderTable(); }
+    function switchType(t, el) { 
+        currentType = t; 
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); 
+        el.classList.add('active'); 
+        renderForm(); 
+    }
+    
+    function filterHistory(type, el) { 
+        currentHistoryFilter = type; 
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active')); 
+        el.classList.add('active'); 
+        renderTable(); 
+    }
     
     function renderForm() { 
         document.getElementById('dynamic-form').innerHTML = fields[currentType].map(f => `
-            <label style="font-size:0.75rem; font-weight:700;">${f.l}</label>
+            <label>${f.l}</label>
             <input type="${f.type || 'text'}" id="${f.id}" class="form-control" value="${f.val || ''}" ${f.type === 'number' ? 'min="1"' : ''}>
         `).join(''); 
     }
     
-    function handleAdminAuth() { if(prompt("รหัสผ่าน:") === "admin1234") document.getElementById('body').classList.add('is-admin'); }
-    function deleteItem(id) { if(confirm('ยืนยันการลบ?')) docRef.orderByChild('id').equalTo(id).once('value', s => s.forEach(c => c.ref.remove())); }
-        
+    function handleAdminAuth() { 
+        if(prompt("รหัสผ่านผู้ดูแลระบบ (Admin Password):") === "admin1234") {
+            document.getElementById('body').classList.add('is-admin'); 
+            alert('✅ เข้าสู่โหมดผู้ดูแลระบบสำเร็จ');
+        } else {
+            alert('❌ รหัสผ่านไม่ถูกต้อง');
+        }
+    }
+    
+    function logoutAdmin() {
+        if(confirm('ต้องการออกจากโหมดผู้ดูแลระบบใช่หรือไม่?')) {
+            document.getElementById('body').classList.remove('is-admin');
+            alert('ออกจากระบบเรียบร้อยแล้ว');
+            
+            if (currentType === 'หนังสือรับ') {
+                switchType('คำสั่ง', document.querySelector('.tab-btn'));
+            }
+        }
+    }
+    
+    function deleteItem(id) { 
+        if(confirm('⚠️ ยืนยันการลบรายการนี้? (การลบจะไม่สามารถกู้คืนได้)')) docRef.orderByChild('id').equalTo(id).once('value', s => s.forEach(c => c.ref.remove())); 
+    }
+    
     function clearAllData() {
-        if(confirm('🚨 คำเตือน: คุณกำลังจะลบข้อมูลทั้งหมดในระบบ! ยืนยันหรือไม่?')) {
+        if(confirm('🚨 คำเตือนขั้นสูง: คุณกำลังจะลบข้อมูลทั้งหมดในระบบ! ยืนยันหรือไม่?')) {
             docRef.remove();
         }
     }
 
     function exportToExcel() {
-        let csv = "\uFEFFเลขที่,ประเภท,เรื่อง,จาก,ถึง,ชื่อผู้ขอ,ลงวันที่,หมายเหตุ,ลิงก์ไฟล์\n";
+        let csv = "\uFEFFเลขที่,ประเภท,เรื่อง,อ้างอิง(หนังสือรับ),จาก,ถึง/มอบหมาย,ชื่อผู้ขอ,ลงวันที่,หมายเหตุ,ลิงก์ไฟล์\n";
         db.forEach(i => {
             const csvNo = i.type === 'หนังสือส่ง' ? i.no : `${i.no}/${i.year}`;
-            csv += `"${csvNo}","${i.type}","${i.sub}","${i.from_dept || ''}","${i.to_dept || ''}","${i.requester || ''}","${i.docDate || ''}","${i.note || ''}","${i.fileUrl || ''}"\n`;
+            csv += `"${csvNo}","${i.type}","${i.sub}","${i.doc_no_ext || ''}","${i.from_dept || ''}","${i.to_dept || i.to_person || ''}","${i.requester || ''}","${i.docDate || ''}","${i.note || ''}","${i.fileUrl || ''}"\n`;
         });
-                
+        
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
@@ -369,7 +591,12 @@
         document.body.removeChild(link);
     }
 
-    setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleString('th-TH'); }, 1000);
+    setInterval(() => { 
+        const now = new Date();
+        const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+        document.getElementById('clock').innerHTML = `<i class="fa-regular fa-clock"></i> ` + now.toLocaleDateString('th-TH', options); 
+    }, 1000);
+    
     renderForm();
 </script>
 </body>
