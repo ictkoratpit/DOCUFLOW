@@ -153,10 +153,9 @@
         .upload-admin:hover { background: var(--text-main); color: white; }
         .upload-success { background: #10b981; color: white; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.2); }
         .upload-success:hover { background: #059669; }
-
         .icon-btn { cursor: pointer; padding: 8px 12px; border-radius: 8px; background: white; color: var(--text-muted); border: 1px solid #e2e8f0; font-size: 0.9rem; transition: all 0.2s; }
         .icon-btn:hover { background: #f8fafc; color: var(--danger); border-color: #fca5a5; }
-
+        
         /* Responsive */
         @media (max-width: 1024px) {
             .dashboard-grid { grid-template-columns: repeat(2, 1fr); }
@@ -274,7 +273,6 @@
 <button class="admin-fab" onclick="handleAdminAuth()" title="เข้าสู่ระบบผู้ดูแล"><i class="fa-solid fa-user-shield"></i></button>
 
 <script>
-    // คงส่วนของ JavaScript ไว้เหมือนเดิม 100% ไม่มีการลบหรือแก้ไข Logic
     const CLOUD_NAME = "dcgjyo3u2"; 
     const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/auto/upload`;
     const CLOUDINARY_PRESET = "docuflow_preset";
@@ -463,16 +461,35 @@
                 extraInfo = `จาก: ${i.from_dept || '-'} | ถึง: ${i.to_dept || '-'}<br>`;
             }
 
-            let actionBtn = '';
-            if (i.fileUrl) {
-                actionBtn = `<a href="${i.fileUrl}" target="_blank" class="btn-upload upload-success"><i class="fa-solid fa-file-pdf"></i> เปิดไฟล์</a>`;
-            } else {
-                if (i.type === 'หนังสือรับ') {
-                    actionBtn = `<label class="btn-upload upload-admin admin-only" style="margin:0;"><input type="file" accept="application/pdf,image/*" style="display:none;" onchange="handleUploadLater(${i.id}, this)"><i class="fa-solid fa-cloud-arrow-up"></i> อัพโหลด</label>`;
-                } else {
-                    actionBtn = `<label class="btn-upload upload-primary" style="margin:0;"><input type="file" accept="application/pdf,image/*" style="display:none;" onchange="handleUploadLater(${i.id}, this)"><i class="fa-solid fa-cloud-arrow-up"></i> อัพโหลด</label>`;
-                }
+            // จัดการลิงก์ไฟล์ (รองรับทั้งระบบเก่าที่เป็นไฟล์เดียว และระบบใหม่ที่เก็บเป็น Array)
+            let fileLinks = '';
+            let urls = i.fileUrls || (i.fileUrl ? [i.fileUrl] : []);
+            
+            if (urls.length > 0) {
+                fileLinks = urls.map((url, index) => 
+                    `<a href="${url}" target="_blank" class="btn-upload upload-success" style="margin-bottom: 4px;">
+                        <i class="fa-solid fa-file-pdf"></i> ไฟล์ ${urls.length > 1 ? index + 1 : ''}
+                    </a>`
+                ).join('');
             }
+
+            // จัดการปุ่มอัปโหลด
+            let uploadBtn = '';
+            if (i.type === 'หนังสือรับ') {
+                // หนังสือรับ: ให้มีปุ่มเพิ่มไฟล์เสมอ และเปิดให้เลือกหลายไฟล์ได้ (multiple)
+                uploadBtn = `<label class="btn-upload upload-admin admin-only" style="margin-bottom: 4px;">
+                                <input type="file" multiple accept="application/pdf,image/*" style="display:none;" onchange="handleUploadLater(${i.id}, this)">
+                                <i class="fa-solid fa-plus"></i> เพิ่มไฟล์
+                             </label>`;
+            } else if (urls.length === 0) {
+                // ประเภทอื่น: อัปโหลดได้แค่ไฟล์เดียวเหมือนเดิม (ถ้ายังไม่มีไฟล์)
+                uploadBtn = `<label class="btn-upload upload-primary" style="margin-bottom: 4px;">
+                                <input type="file" accept="application/pdf,image/*" style="display:none;" onchange="handleUploadLater(${i.id}, this)">
+                                <i class="fa-solid fa-cloud-arrow-up"></i> อัพโหลด
+                             </label>`;
+            }
+
+            let actionBtn = `<div style="display: flex; gap: 4px; flex-wrap: wrap;">${fileLinks}${uploadBtn}</div>`;
 
             return `
                 <tr>
@@ -501,21 +518,33 @@
     }
 
     async function handleUploadLater(id, input) {
-        const file = input.files[0];
-        if (!file) return;
+        const files = input.files;
+        if (!files || files.length === 0) return;
         
         const container = input.parentElement;
         const originalHTML = container.innerHTML;
         container.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> อัพโหลด...';
         
         try {
-            const fileUrl = await uploadFile(file);
+            // อัปโหลดทุกไฟล์ที่เลือกพร้อมกัน
+            const uploadPromises = Array.from(files).map(file => uploadFile(file));
+            const newUrls = await Promise.all(uploadPromises);
+
             await docRef.orderByChild('id').equalTo(id).once('value', s => {
                 s.forEach(c => {
-                    c.ref.update({ fileUrl: fileUrl });
+                    const data = c.val();
+                    // ดึงไฟล์เก่าที่มีอยู่ (ถ้ามี) มารวมกับไฟล์ใหม่
+                    let existingUrls = data.fileUrls || (data.fileUrl ? [data.fileUrl] : []);
+                    let updatedUrls = [...existingUrls, ...newUrls];
+                    
+                    // บันทึกกลับลงฐานข้อมูล
+                    c.ref.update({ 
+                        fileUrls: updatedUrls, 
+                        fileUrl: updatedUrls[0] // เก็บ fallback ให้ระบบเก่า
+                    });
                 });
             });
-            alert('อัพโหลดเอกสารแนบเรียบร้อยแล้ว!');
+            alert(`อัพโหลดเอกสารสำเร็จ ${files.length} ไฟล์!`);
         } catch (e) {
             console.error(e);
             alert('เกิดข้อผิดพลาดในการอัพโหลด กรุณาลองใหม่อีกครั้ง');
@@ -579,7 +608,11 @@
         let csv = "\uFEFFเลขที่,ประเภท,เรื่อง,อ้างอิง(หนังสือรับ),จาก,ถึง/มอบหมาย,ชื่อผู้ขอ,ลงวันที่,หมายเหตุ,ลิงก์ไฟล์\n";
         db.forEach(i => {
             const csvNo = i.type === 'หนังสือส่ง' ? i.no : `${i.no}/${i.year}`;
-            csv += `"${csvNo}","${i.type}","${i.sub}","${i.doc_no_ext || ''}","${i.from_dept || ''}","${i.to_dept || i.to_person || ''}","${i.requester || ''}","${i.docDate || ''}","${i.note || ''}","${i.fileUrl || ''}"\n`;
+            
+            // รวมลิงก์ทั้งหมดกรณีมีหลายไฟล์
+            const fileLinks = i.fileUrls ? i.fileUrls.join(', ') : (i.fileUrl || '');
+            
+            csv += `"${csvNo}","${i.type}","${i.sub}","${i.doc_no_ext || ''}","${i.from_dept || ''}","${i.to_dept || i.to_person || ''}","${i.requester || ''}","${i.docDate || ''}","${i.note || ''}","${fileLinks}"\n`;
         });
         
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
