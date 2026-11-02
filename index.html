@@ -1,491 +1,532 @@
-
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบสารบัญโรงเรียนโคราชพิทยาคม</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap');
-        :root {
-            --primary:#6d5dfc; --primary-hover:#5848e8; --primary-soft:#eeecff;
-            --accent:#f5b942; --danger:#ef5b76; --success:#16b889; --warning:#eea631; --info:#39a9db;
-            --ink:#18233f; --muted:#71809d; --bg:#f5f7fc; --line:#e7ebf4;
-            --card-shadow:0 16px 40px rgba(36,48,86,.08); --hover-shadow:0 20px 48px rgba(36,48,86,.15);
-        }
-        *{box-sizing:border-box} html{scroll-behavior:smooth}
-        body{font-family:'Sarabun',sans-serif;background:radial-gradient(circle at 6% 0%,#e9e7ff 0,transparent 28%),radial-gradient(circle at 100% 12%,#fff1d2 0,transparent 22%),var(--bg);margin:0;color:var(--ink);padding-bottom:90px}
-        .navbar{background:rgba(255,255,255,.78);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);padding:14px 5%;display:flex;justify-content:space-between;align-items:center;box-shadow:0 1px 0 rgba(40,54,90,.08);position:sticky;top:0;z-index:100;border-bottom:1px solid rgba(226,231,242,.75)}
-        .navbar-logo-group{display:flex;align-items:center;gap:14px}.logo-main{font-size:1.3rem;font-weight:800;color:var(--primary);letter-spacing:.5px}.logo-main i{color:var(--accent)!important;filter:drop-shadow(0 3px 5px rgba(245,185,66,.3))}.school-info{border-left:1px solid #dfe4ef;padding-left:14px}.school-name{font-size:.95rem;font-weight:600;color:var(--ink);line-height:1.2}
-        #clock{font-size:.82rem!important;font-weight:700!important;color:var(--primary)!important;background:var(--primary-soft)!important;padding:8px 14px!important;border-radius:999px!important}
-        .container{max-width:1320px;margin:2.4rem auto;padding:0 1.25rem}.dashboard-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:24px}.stat-card{background:rgba(255,255,255,.9);border-radius:18px;padding:1.3rem 1.35rem;box-shadow:var(--card-shadow);border:1px solid rgba(255,255,255,.8);border-left:5px solid var(--primary);transition:.3s;position:relative;overflow:hidden}.stat-card:after{content:'';position:absolute;width:80px;height:80px;border-radius:50%;right:-25px;bottom:-35px;background:var(--primary-soft);opacity:.7}.stat-card:hover{transform:translateY(-5px);box-shadow:var(--hover-shadow)}.stat-label{font-size:.78rem;color:var(--muted);font-weight:700;letter-spacing:.6px}.stat-val{font-size:1.65rem;font-weight:800;margin:7px 0;color:var(--ink);position:relative;z-index:1}.stat-total{font-size:.78rem;color:#9aa6bc;font-weight:500}
-        .main-layout{display:grid;grid-template-columns:370px 1fr;gap:22px;align-items:start}.card{background:rgba(255,255,255,.94);border-radius:22px;padding:1.65rem;box-shadow:var(--card-shadow);border:1px solid rgba(255,255,255,.9)}.card-title{margin:0 0 1.35rem;font-size:1.18rem;font-weight:800;display:flex;align-items:center;gap:10px;color:var(--ink)}.card-title i{background:var(--primary-soft);width:32px;height:32px;border-radius:10px;display:grid;place-items:center;color:var(--primary)!important}
-        label{font-size:.8rem;font-weight:700;color:var(--muted);margin:0 0 5px;display:block}.form-control{width:100%;padding:12px 14px;border:1px solid #dce2ee;border-radius:11px;box-sizing:border-box;font-family:'Sarabun';margin-bottom:1rem;font-size:1rem;background:#fbfcff;transition:.2s;color:var(--ink)}.form-control:focus{background:#fff;border-color:var(--primary);box-shadow:0 0 0 4px rgba(109,93,252,.14);outline:none}
-        .tab-group{display:flex;background:#f1f3fa;padding:5px;border-radius:13px;margin-bottom:1.35rem;flex-wrap:wrap;gap:4px}.tab-btn{flex:1;padding:9px 7px;border:none;background:transparent;cursor:pointer;font-weight:700;color:var(--muted);border-radius:9px;font-family:'Sarabun';font-size:.83rem;white-space:nowrap;transition:.2s}.tab-btn:hover{color:var(--ink)}.tab-btn.active{background:#fff;color:var(--primary);box-shadow:0 3px 9px rgba(42,51,88,.1)}
-        @keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}#dynamic-form{animation:fadeIn .3s ease-out}.btn{padding:11px 20px;border-radius:11px;border:none;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;font-family:'Sarabun';transition:.2s;justify-content:center;font-size:.94rem}.btn:active{transform:scale(.98)}.btn-primary{background:linear-gradient(135deg,var(--primary),#887bff);color:#fff;width:100%;box-shadow:0 8px 18px rgba(109,93,252,.25)}.btn-primary:hover{filter:brightness(1.06);box-shadow:0 10px 22px rgba(109,93,252,.35)}.btn-outline{background:#fff;border:1px solid #dce2ee;color:var(--ink);font-size:.85rem;padding:8px 15px}.btn-outline:hover{background:#f8f9fd;border-color:#bbc5d8}.btn-danger{background:var(--danger);color:#fff;font-size:.85rem}.btn-danger:hover{background:#db4562}
-        .admin-panel{background:linear-gradient(110deg,#fff4f5,#fff9ef);border:1px solid #ffd9d4;border-radius:18px;padding:15px 20px;margin-bottom:24px;display:none;align-items:center;justify-content:space-between;gap:15px;flex-wrap:wrap;box-shadow:0 8px 20px rgba(225,91,118,.07)}body.is-admin .admin-panel{display:flex;animation:fadeIn .4s ease}.admin-fab{position:fixed;bottom:24px;right:24px;background:var(--ink);color:#fff;width:58px;height:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 12px 28px rgba(24,35,63,.3);cursor:pointer;z-index:999;border:3px solid #fff;font-size:1.35rem;transition:.3s}.admin-fab:hover{transform:scale(1.1) rotate(5deg)}body.is-admin .admin-fab{display:none}.admin-only{display:none!important}body.is-admin .admin-only{display:inline-flex!important}
-        .history-filter-group{display:flex;gap:8px;margin-bottom:1.2rem;flex-wrap:wrap}.filter-btn{border:1px solid #e0e5ef;background:#fff;padding:6px 14px;font-family:'Sarabun';font-size:.8rem;font-weight:700;color:var(--muted);cursor:pointer;border-radius:20px;transition:.2s}.filter-btn:hover{border-color:#c5cde0;background:#fafbfe}.filter-btn.active{background:var(--primary);border-color:var(--primary);color:#fff;box-shadow:0 4px 10px rgba(109,93,252,.22)}.search-container{position:relative;margin-bottom:1.35rem}.search-container i{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#9aa6bc}#search{padding-left:40px;margin-bottom:0;background:#fff;border-radius:12px}
-        .table-wrapper{overflow-x:auto;border-radius:14px;border:1px solid var(--line)}table{width:100%;border-collapse:collapse;background:#fff}th{text-align:left;padding:13px 15px;font-size:.76rem;color:var(--muted);background:#f8f9fd;font-weight:800;text-transform:uppercase;border-bottom:1px solid var(--line);white-space:nowrap}td{padding:15px;border-bottom:1px solid #f0f2f7;vertical-align:top}tr:hover td{background:#fbfcff}.badge{padding:4px 10px;border-radius:20px;font-size:.7rem;font-weight:800;display:inline-block;margin-bottom:8px;letter-spacing:.3px}.bg-order{background:#ebe9ff;color:#5646d7}.bg-mail{background:#def8ed;color:#10865f}.bg-cert{background:#fff1cf;color:#a86b08}.bg-receive{background:#def3fc;color:#16799f}.btn-upload{display:inline-flex;align-items:center;gap:8px;padding:8px 13px;border-radius:9px;font-size:.8rem;font-weight:700;cursor:pointer;transition:.2s;text-decoration:none;border:1px solid transparent;font-family:'Sarabun'}.upload-primary{background:#eeecff;color:var(--primary);border-color:#d8d3ff}.upload-primary:hover{background:var(--primary);color:#fff}.upload-admin{background:#f2f4f8;color:var(--muted);border-color:#e1e5ee}.upload-admin:hover{background:var(--ink);color:#fff}.upload-success{background:var(--success);color:#fff;box-shadow:0 3px 8px rgba(22,184,137,.2)}.upload-success:hover{background:#0d9c73}.icon-btn{cursor:pointer;padding:8px 11px;border-radius:9px;background:#fff;color:var(--muted);border:1px solid #e1e5ee;font-size:.9rem;transition:.2s}.icon-btn:hover{background:#fff4f5;color:var(--danger);border-color:#ffb5c1}
-        @media(max-width:1024px){.dashboard-grid{grid-template-columns:repeat(2,1fr)}.main-layout{grid-template-columns:1fr}}@media(max-width:768px){.navbar{padding:12px 4%}.school-info{display:none}.dashboard-grid{grid-template-columns:1fr 1fr;gap:12px}.stat-card{padding:1rem}.stat-val{font-size:1.35rem}.card{padding:1.2rem}.container{margin:1.5rem auto}.table-wrapper{border:none;background:transparent}table,thead,tbody,th,td,tr{display:block}thead tr{position:absolute;top:-9999px;left:-9999px}tr{background:#fff;border:1px solid var(--line);border-radius:14px;margin-bottom:1rem;padding:12px;box-shadow:0 3px 12px rgba(36,48,86,.05)}tr:hover td{background:transparent}td{border:none;padding:8px 0;position:relative;text-align:left}td:before{content:attr(data-label);font-weight:800;color:var(--muted);font-size:.72rem;text-transform:uppercase;display:block;margin-bottom:4px}td:first-child{border-bottom:1px dashed #dfe4ef;margin-bottom:8px;padding-bottom:12px}}@media(max-width:480px){.dashboard-grid{grid-template-columns:1fr}.navbar-logo-group{gap:8px}.logo-main{font-size:1.1rem}}
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ระบบสารบัญโรงเรียนโคราชพิทยาคม</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap');
+:root {
+--primary:#6d5dfc; --primary-hover:#5848e8; --primary-soft:#eeecff;
+--accent:#f5b942; --danger:#ef5b76; --success:#16b889; --warning:#eea631; --info:#39a9db;
+--ink:#18233f; --muted:#71809d; --bg:#f5f7fc; --line:#e7ebf4;
+--card-shadow:0 16px 40px rgba(36,48,86,.08); --hover-shadow:0 20px 48px rgba(36,48,86,.15);
+}
+*{box-sizing:border-box} html{scroll-behavior:smooth}
+body{font-family:'Sarabun',sans-serif;background:radial-gradient(circle at 6% 0%,#e9e7ff 0,transparent 28%),radial-gradient(circle at 100% 12%,#fff1d2 0,transparent 22%),var(--bg);margin:0;color:var(--ink);padding-bottom:90px}
+.navbar{background:rgba(255,255,255,.78);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);padding:14px 5%;display:flex;justify-content:space-between;align-items:center;box-shadow:0 1px 0 rgba(40,54,90,.08);position:sticky;top:0;z-index:100;border-bottom:1px solid rgba(226,231,242,.75)}
+.navbar-logo-group{display:flex;align-items:center;gap:14px}.logo-main{font-size:1.3rem;font-weight:800;color:var(--primary);letter-spacing:.5px}.logo-main i{color:var(--accent)!important;filter:drop-shadow(0 3px 5px rgba(245,185,66,.3))}.school-info{border-left:1px solid #dfe4ef;padding-left:14px}.school-name{font-size:.95rem;font-weight:600;color:var(--ink);line-height:1.2}
+#clock{font-size:.82rem!important;font-weight:700!important;color:var(--primary)!important;background:var(--primary-soft)!important;padding:8px 14px!important;border-radius:999px!important}
+.container{max-width:1320px;margin:2.4rem auto;padding:0 1.25rem}.dashboard-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:24px}.stat-card{background:rgba(255,255,255,.9);border-radius:18px;padding:1.3rem 1.35rem;box-shadow:var(--card-shadow);border:1px solid rgba(255,255,255,.8);border-left:5px solid var(--primary);transition:.3s;position:relative;overflow:hidden}.stat-card:after{content:'';position:absolute;width:80px;height:80px;border-radius:50%;right:-25px;bottom:-35px;background:var(--primary-soft);opacity:.7}.stat-card:hover{transform:translateY(-5px);box-shadow:var(--hover-shadow)}.stat-label{font-size:.78rem;color:var(--muted);font-weight:700;letter-spacing:.6px}.stat-val{font-size:1.65rem;font-weight:800;margin:7px 0;color:var(--ink);position:relative;z-index:1}.stat-total{font-size:.78rem;color:#9aa6bc;font-weight:500}
+.main-layout{display:grid;grid-template-columns:370px 1fr;gap:22px;align-items:start}.card{background:rgba(255,255,255,.94);border-radius:22px;padding:1.65rem;box-shadow:var(--card-shadow);border:1px solid rgba(255,255,255,.9)}.card-title{margin:0 0 1.35rem;font-size:1.18rem;font-weight:800;display:flex;align-items:center;gap:10px;color:var(--ink)}.card-title i{background:var(--primary-soft);width:32px;height:32px;border-radius:10px;display:grid;place-items:center;color:var(--primary)!important}
+label{font-size:.8rem;font-weight:700;color:var(--muted);margin:0 0 5px;display:block}.form-control{width:100%;padding:12px 14px;border:1px solid #dce2ee;border-radius:11px;box-sizing:border-box;font-family:'Sarabun';margin-bottom:1rem;font-size:1rem;background:#fbfcff;transition:.2s;color:var(--ink)}.form-control:focus{background:#fff;border-color:var(--primary);box-shadow:0 0 0 4px rgba(109,93,252,.14);outline:none}
+.tab-group{display:flex;background:#f1f3fa;padding:5px;border-radius:13px;margin-bottom:1.35rem;flex-wrap:wrap;gap:4px}.tab-btn{flex:1;padding:9px 7px;border:none;background:transparent;cursor:pointer;font-weight:700;color:var(--muted);border-radius:9px;font-family:'Sarabun';font-size:.83rem;white-space:nowrap;transition:.2s}.tab-btn:hover{color:var(--ink)}.tab-btn.active{background:#fff;color:var(--primary);box-shadow:0 3px 9px rgba(42,51,88,.1)}
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}#dynamic-form{animation:fadeIn .3s ease-out}.btn{padding:11px 20px;border-radius:11px;border:none;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;font-family:'Sarabun';transition:.2s;justify-content:center;font-size:.94rem}.btn:active{transform:scale(.98)}.btn-primary{background:linear-gradient(135deg,var(--primary),#887bff);color:#fff;width:100%;box-shadow:0 8px 18px rgba(109,93,252,.25)}.btn-primary:hover{filter:brightness(1.06);box-shadow:0 10px 22px rgba(109,93,252,.35)}.btn-outline{background:#fff;border:1px solid #dce2ee;color:var(--ink);font-size:.85rem;padding:8px 15px}.btn-outline:hover{background:#f8f9fd;border-color:#bbc5d8}.btn-danger{background:var(--danger);color:#fff;font-size:.85rem}.btn-danger:hover{background:#db4562}
+.admin-panel{background:linear-gradient(110deg,#fff4f5,#fff9ef);border:1px solid #ffd9d4;border-radius:18px;padding:15px 20px;margin-bottom:24px;display:none;align-items:center;justify-content:space-between;gap:15px;flex-wrap:wrap;box-shadow:0 8px 20px rgba(225,91,118,.07)}body.is-admin .admin-panel{display:flex;animation:fadeIn .4s ease}.admin-fab{position:fixed;bottom:24px;right:24px;background:var(--ink);color:#fff;width:58px;height:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 12px 28px rgba(24,35,63,.3);cursor:pointer;z-index:999;border:3px solid #fff;font-size:1.35rem;transition:.3s}.admin-fab:hover{transform:scale(1.1) rotate(5deg)}body.is-admin .admin-fab{display:none}.admin-only{display:none!important}body.is-admin .admin-only{display:inline-flex!important}
+.history-filter-group{display:flex;gap:8px;margin-bottom:1.2rem;flex-wrap:wrap}.filter-btn{border:1px solid #e0e5ef;background:#fff;padding:6px 14px;font-family:'Sarabun';font-size:.8rem;font-weight:700;color:var(--muted);cursor:pointer;border-radius:20px;transition:.2s}.filter-btn:hover{border-color:#c5cde0;background:#fafbfe}.filter-btn.active{background:var(--primary);border-color:var(--primary);color:#fff;box-shadow:0 4px 10px rgba(109,93,252,.22)}.search-container{position:relative;margin-bottom:1.35rem}.search-container i{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#9aa6bc}#search{padding-left:40px;margin-bottom:0;background:#fff;border-radius:12px}
+.table-wrapper{overflow-x:auto;border-radius:14px;border:1px solid var(--line)}table{width:100%;border-collapse:collapse;background:#fff}th{text-align:left;padding:13px 15px;font-size:.76rem;color:var(--muted);background:#f8f9fd;font-weight:800;text-transform:uppercase;border-bottom:1px solid var(--line);white-space:nowrap}td{padding:15px;border-bottom:1px solid #f0f2f7;vertical-align:top}tr:hover td{background:#fbfcff}.badge{padding:4px 10px;border-radius:20px;font-size:.7rem;font-weight:800;display:inline-block;margin-bottom:8px;letter-spacing:.3px}.bg-order{background:#ebe9ff;color:#5646d7}.bg-mail{background:#def8ed;color:#10865f}.bg-cert{background:#fff1cf;color:#a86b08}.bg-receive{background:#def3fc;color:#16799f}.btn-upload{display:inline-flex;align-items:center;gap:8px;padding:8px 13px;border-radius:9px;font-size:.8rem;font-weight:700;cursor:pointer;transition:.2s;text-decoration:none;border:1px solid transparent;font-family:'Sarabun'}.upload-primary{background:#eeecff;color:var(--primary);border-color:#d8d3ff}.upload-primary:hover{background:var(--primary);color:#fff}.upload-admin{background:#f2f4f8;color:var(--muted);border-color:#e1e5ee}.upload-admin:hover{background:var(--ink);color:#fff}.upload-success{background:var(--success);color:#fff;box-shadow:0 3px 8px rgba(22,184,137,.2)}.upload-success:hover{background:#0d9c73}.icon-btn{cursor:pointer;padding:8px 11px;border-radius:9px;background:#fff;color:var(--muted);border:1px solid #e1e5ee;font-size:.9rem;transition:.2s}.icon-btn:hover{background:#fff4f5;color:var(--danger);border-color:#ffb5c1}
+@media(max-width:1024px){.dashboard-grid{grid-template-columns:repeat(2,1fr)}.main-layout{grid-template-columns:1fr}}@media(max-width:768px){.navbar{padding:12px 4%}.school-info{display:none}.dashboard-grid{grid-template-columns:1fr 1fr;gap:12px}.stat-card{padding:1rem}.stat-val{font-size:1.35rem}.card{padding:1.2rem}.container{margin:1.5rem auto}.table-wrapper{border:none;background:transparent}table,thead,tbody,th,td,tr{display:block}thead tr{position:absolute;top:-9999px;left:-9999px}tr{background:#fff;border:1px solid var(--line);border-radius:14px;margin-bottom:1rem;padding:12px;box-shadow:0 3px 12px rgba(36,48,86,.05)}tr:hover td{background:transparent}td{border:none;padding:8px 0;position:relative;text-align:left}td:before{content:attr(data-label);font-weight:800;color:var(--muted);font-size:.72rem;text-transform:uppercase;display:block;margin-bottom:4px}td:first-child{border-bottom:1px dashed #dfe4ef;margin-bottom:8px;padding-bottom:12px}}@media(max-width:480px){.dashboard-grid{grid-template-columns:1fr}.navbar-logo-group{gap:8px}.logo-main{font-size:1.1rem}}
+</style>
 </head>
 <body id="body">
 <nav class="navbar">
-    <div class="navbar-logo-group">
-        <div class="logo-main"><i class="fa-solid fa-bolt" style="color: #f59e0b;"></i> DOCUFLOW</div>
-        <div class="school-info"><div class="school-name">ระบบสารบัญโรงเรียนโคราชพิทยาคม</div></div>
-    </div>
-    <div id="clock" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted); background: #f1f5f9; padding: 6px 12px; border-radius: 20px;"></div>
-</nav>
-
-<div class="container">
-    <div class="admin-panel">
-        <div style="font-size: 1.1rem; font-weight: 700;"><strong style="color:var(--danger)"><i class="fa-solid fa-shield-halved"></i> ADMIN MODE</strong> <span style="font-size:0.85rem; font-weight:500; color:#881337; margin-left: 8px;">คุณมีสิทธิ์จัดการข้อมูลทั้งหมด</span></div>
-        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <button class="btn btn-outline" onclick="exportToExcel()"><i class="fa-solid fa-file-excel" style="color: #10b981;"></i> Export CSV</button>
-            <button class="btn btn-danger" onclick="clearAllData()"><i class="fa-solid fa-trash-can"></i> ล้างทั้งหมด</button>
-            <button class="btn btn-outline" onclick="logoutAdmin()"><i class="fa-solid fa-right-from-bracket"></i> ออกจากระบบ</button>
-        </div>
-    </div>
-
-    <div class="dashboard-grid">
-        <div class="stat-card" style="border-left-color: var(--primary)">
-            <div class="stat-label">คำสั่งล่าสุด</div>
-            <div class="stat-val" id="last-order">-</div>
-            <div class="stat-total" id="total-order">ยอดรวม: 0 รายการ</div>
-        </div>
-        <div class="stat-card" style="border-left-color: var(--success)">
-            <div class="stat-label">หนังสือส่งล่าสุด</div>
-            <div class="stat-val" id="last-mail">-</div>
-            <div class="stat-total" id="total-mail">ยอดรวม: 0 รายการ</div>
-        </div>
-        <div class="stat-card" style="border-left-color: var(--warning)">
-            <div class="stat-label">เกียรติบัตรล่าสุด</div>
-            <div class="stat-val" id="last-cert">-</div>
-            <div class="stat-total" id="total-cert">ยอดรวม: 0 รายการ</div>
-        </div>
-        <div class="stat-card" style="border-left-color: var(--info)">
-            <div class="stat-label">รับหนังสือล่าสุด</div>
-            <div class="stat-val" id="last-receive">-</div>
-            <div class="stat-total" id="total-receive">ยอดรวม: 0 รายการ</div>
-        </div>
-    </div>
-
-    <div class="main-layout">
-        <div class="card">
-            <h3 class="card-title"><i class="fa-solid fa-pen-to-square" style="color: var(--primary);"></i> ออกเลขเอกสารใหม่</h3>
-            <div class="tab-group">
-                <button class="tab-btn active" onclick="switchType('คำสั่ง', this)">คำสั่ง</button>
-                <button class="tab-btn" onclick="switchType('หนังสือส่ง', this)">หนังสือส่ง</button>
-                <button class="tab-btn" onclick="switchType('เกียรติบัตร', this)">เกียรติบัตร</button>
-                <button class="tab-btn admin-only" style="color: var(--info);" onclick="switchType('หนังสือรับ', this)"><i class="fa-solid fa-download"></i> รับหนังสือ</button>
-            </div>
-            
-            <div id="dynamic-form"></div>
-            
-            <label>ชื่อผู้ขอเลข / ผู้บันทึก</label>
-            <input type="text" id="requester_name" class="form-control" placeholder="ระบุชื่อ-นามสกุล">
-            
-            <label>ลงวันที่ในเอกสาร</label>
-            <input type="date" id="doc_date" class="form-control">
-            
-            <label>หมายเหตุ</label>
-            <input type="text" id="note" class="form-control" placeholder="ระบุเพิ่มเติม (ถ้ามี)">
-            
-            <button class="btn btn-primary" id="submitBtn" onclick="submitData()" style="margin-top: 10px;">
-                <i class="fa-solid fa-check-circle"></i> ยืนยันการออกเลข
-            </button>
-        </div>
-
-        <div class="card">
-            <h3 class="card-title"><i class="fa-solid fa-clock-rotate-left" style="color: var(--text-muted);"></i> ประวัติการทำรายการ</h3>
-            <div class="history-filter-group">
-                <button class="filter-btn active" onclick="filterHistory('All', this)">ทั้งหมด</button>
-                <button class="filter-btn" onclick="filterHistory('คำสั่ง', this)">คำสั่ง</button>
-                <button class="filter-btn" onclick="filterHistory('หนังสือส่ง', this)">หนังสือส่ง</button>
-                <button class="filter-btn" onclick="filterHistory('เกียรติบัตร', this)">เกียรติบัตร</button>
-                <button class="filter-btn" onclick="filterHistory('หนังสือรับ', this)">หนังสือรับ</button>
-            </div>
-            
-            <div class="search-container">
-                <i class="fa-solid fa-magnifying-glass"></i>
-                <input type="text" id="search" placeholder="ค้นหาเลขที่, ชื่อเรื่อง หรือผู้บันทึก..." class="form-control" onkeyup="renderTable()">
-            </div>
-            
-            <div class="table-wrapper">
-                <table id="dataTable">
-                    <thead><tr><th>เลขที่เอกสาร</th><th>รายละเอียด</th><th>การจัดการ</th></tr></thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+<div class="navbar-logo-group">
+<div class="logo-main"><i class="fa-solid fa-bolt" style="color: #f59e0b;"></i> DOCUFLOW</div>
+<div class="school-info"><div class="school-name">ระบบสารบัญโรงเรียนโคราชพิทยาคม</div></div>
 </div>
-
+<div id="clock" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted); background: #f1f5f9; padding: 6px 12px; border-radius: 20px;"></div>
+</nav>
+<div class="container">
+<div class="admin-panel">
+<div style="font-size: 1.1rem; font-weight: 700;"><strong style="color:var(--danger)"><i class="fa-solid fa-shield-halved"></i> ADMIN MODE</strong> <span style="font-size:0.85rem; font-weight:500; color:#881337; margin-left: 8px;">คุณมีสิทธิ์จัดการข้อมูลทั้งหมด</span></div>
+<div style="display: flex; gap: 10px; flex-wrap: wrap;">
+<button class="btn btn-outline" onclick="exportToExcel()"><i class="fa-solid fa-file-excel" style="color: #10b981;"></i> Export CSV</button>
+<button class="btn btn-danger" onclick="clearAllData()"><i class="fa-solid fa-trash-can"></i> ล้างทั้งหมด</button>
+<button class="btn btn-outline" onclick="logoutAdmin()"><i class="fa-solid fa-right-from-bracket"></i> ออกจากระบบ</button>
+</div>
+</div>
+<div class="dashboard-grid">
+<div class="stat-card" style="border-left-color: var(--primary)">
+<div class="stat-label">คำสั่งล่าสุด</div>
+<div class="stat-val" id="last-order">-</div>
+<div class="stat-total" id="total-order">ยอดรวม: 0 รายการ</div>
+</div>
+<div class="stat-card" style="border-left-color: var(--success)">
+<div class="stat-label">หนังสือส่งล่าสุด</div>
+<div class="stat-val" id="last-mail">-</div>
+<div class="stat-total" id="total-mail">ยอดรวม: 0 รายการ</div>
+</div>
+<div class="stat-card" style="border-left-color: var(--warning)">
+<div class="stat-label">เกียรติบัตรล่าสุด</div>
+<div class="stat-val" id="last-cert">-</div>
+<div class="stat-total" id="total-cert">ยอดรวม: 0 รายการ</div>
+</div>
+<div class="stat-card" style="border-left-color: var(--info)">
+<div class="stat-label">รับหนังสือล่าสุด</div>
+<div class="stat-val" id="last-receive">-</div>
+<div class="stat-total" id="total-receive">ยอดรวม: 0 รายการ</div>
+</div>
+</div>
+<div class="main-layout">
+<div class="card">
+<h3 class="card-title"><i class="fa-solid fa-pen-to-square" style="color: var(--primary);"></i> ออกเลขเอกสารใหม่</h3>
+<div class="tab-group">
+<button class="tab-btn active" onclick="switchType('คำสั่ง', this)">คำสั่ง</button>
+<button class="tab-btn" onclick="switchType('หนังสือส่ง', this)">หนังสือส่ง</button>
+<button class="tab-btn" onclick="switchType('เกียรติบัตร', this)">เกียรติบัตร</button>
+<button class="tab-btn admin-only" style="color: var(--info);" onclick="switchType('หนังสือรับ', this)"><i class="fa-solid fa-download"></i> รับหนังสือ</button>
+</div>
+<div id="dynamic-form"></div>
+<label>ชื่อผู้ขอเลข / ผู้บันทึก</label>
+<input type="text" id="requester_name" class="form-control" placeholder="ระบุชื่อ-นามสกุล">
+<label>ลงวันที่ในเอกสาร</label>
+<input type="date" id="doc_date" class="form-control">
+<label>หมายเหตุ</label>
+<input type="text" id="note" class="form-control" placeholder="ระบุเพิ่มเติม (ถ้ามี)">
+<button class="btn btn-primary" id="submitBtn" onclick="submitData()" style="margin-top: 10px;">
+<i class="fa-solid fa-check-circle"></i> ยืนยันการออกเลข
+</button>
+</div>
+<div class="card">
+<h3 class="card-title"><i class="fa-solid fa-clock-rotate-left" style="color: var(--text-muted);"></i> ประวัติการทำรายการ</h3>
+<div class="history-filter-group">
+<button class="filter-btn active" onclick="filterHistory('All', this)">ทั้งหมด</button>
+<button class="filter-btn" onclick="filterHistory('คำสั่ง', this)">คำสั่ง</button>
+<button class="filter-btn" onclick="filterHistory('หนังสือส่ง', this)">หนังสือส่ง</button>
+<button class="filter-btn" onclick="filterHistory('เกียรติบัตร', this)">เกียรติบัตร</button>
+<button class="filter-btn" onclick="filterHistory('หนังสือรับ', this)">หนังสือรับ</button>
+</div>
+<div class="search-container">
+<i class="fa-solid fa-magnifying-glass"></i>
+<input type="text" id="search" placeholder="ค้นหาเลขที่, ชื่อเรื่อง หรือผู้บันทึก..." class="form-control" onkeyup="renderTable()">
+</div>
+<div class="table-wrapper">
+<table id="dataTable">
+<thead><tr><th>เลขที่เอกสาร</th><th>รายละเอียด</th><th>การจัดการ</th></tr></thead>
+<tbody></tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
 <button class="admin-fab" onclick="handleAdminAuth()" title="เข้าสู่ระบบผู้ดูแล"><i class="fa-solid fa-user-shield"></i></button>
-
 <script>
-    const CLOUD_NAME = "dcgjyo3u2"; 
-    const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/auto/upload`;
-    const CLOUDINARY_PRESET = "docuflow_preset";
-    
-    const firebaseConfig = { databaseURL: "https://projecttest-118bb-default-rtdb.asia-southeast1.firebasedatabase.app/" };
-    firebase.initializeApp(firebaseConfig);
-    const docRef = firebase.database().ref('documents');
-    
-    const DEFAULTS = { 'คำสั่ง': 148, 'หนังสือส่ง': 121, 'เกียรติบัตร': 156, 'หนังสือรับ': 0 };
-    let db = [];
-    let currentType = 'คำสั่ง';
-    let currentHistoryFilter = 'All';
-    
-    const fields = {
-        'คำสั่ง': [ 
-            {id:'sub', l:'เรื่องคำสั่ง'} 
-        ],
-        'หนังสือส่ง': [ 
-            {id:'sub', l:'เรื่องหนังสือ'}, 
-            {id:'from_dept', l:'จาก (หน่วยงาน/บุคคล)'}, 
-            {id:'to_dept', l:'ถึง (หน่วยงาน/บุคคล)'} 
-        ],
-        'เกียรติบัตร': [ 
-            {id:'sub', l:'โครงการ'}, 
-            {id:'rec', l:'ชื่อผู้รับ (ระบุรายบุคคล หรือ "ตามบัญชีรายชื่อแนบท้าย")'}, 
-            {id:'req_dept', l:'หน่วยงาน'},
-            {id:'qty', l:'จำนวนเลขที่ต้องการจอง (ฉบับ)', type:'number', val:'1'}
-        ],
-        'หนังสือรับ': [
-            {id:'doc_no_ext', l:'เลขที่หนังสือต้นทาง (ที่ส่งมา)'},
-            {id:'sub', l:'เรื่อง'},
-            {id:'from_dept', l:'จาก (เช่น สพม.นครราชสีมา)'},
-            {id:'to_person', l:'มอบหมาย/ผู้รับผิดชอบ'}
-        ]
-    };
+const CLOUD_NAME = "dcgjyo3u2";
+const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/auto/upload`;
+const CLOUDINARY_PRESET = "docuflow_preset";
+const firebaseConfig = { databaseURL: "https://projecttest-118bb-default-rtdb.asia-southeast1.firebasedatabase.app/" };
+firebase.initializeApp(firebaseConfig);
+const docRef = firebase.database().ref('documents');
+const DEFAULTS = { 'คำสั่ง': 148, 'หนังสือส่ง': 121, 'เกียรติบัตร': 156, 'หนังสือรับ': 0 };
 
-    document.getElementById('doc_date').valueAsDate = new Date();
-    
-    docRef.on('value', (s) => {
-        db = s.val() ? Object.values(s.val()).reverse() : [];
-        updateStats();
-        renderTable();
+const counterRef = firebase.database().ref('documentCounters');
+
+function getThaiShortYear(date = new Date()) {
+    return (date.getFullYear() + 543) % 100;
+}
+
+function getBaseline(type, year) {
+    if (year !== 69) return 0;
+    const sameTypeSameYear = db.filter(i => i.type === type && Number(i.year) === Number(year));
+    const maxExisting = sameTypeSameYear.length
+        ? Math.max(...sameTypeSameYear.map(i => parseInt(i.no, 10) || 0))
+        : 0;
+    return Math.max(DEFAULTS[type] || 0, maxExisting);
+}
+
+async function reserveDocumentNumbers(type, qty, year) {
+    const safeTypeKey = encodeURIComponent(type);
+    const ref = counterRef.child(String(year)).child(safeTypeKey);
+    const baseline = getBaseline(type, year);
+
+    const result = await ref.transaction(current => {
+        const currentNo = Number(current);
+        const startFrom = Number.isFinite(currentNo) && currentNo > 0 ? currentNo : baseline;
+        return startFrom + qty;
     });
 
-    function updateStats() {
-        const counts = { 'คำสั่ง': 0, 'หนังสือส่ง': 0, 'เกียรติบัตร': 0, 'หนังสือรับ': 0 };
-        const lasts = { 'คำสั่ง': '-', 'หนังสือส่ง': '-', 'เกียรติบัตร': '-', 'หนังสือรับ': '-' };
-        
-        [...db].reverse().forEach(i => {
-            counts[i.type]++;
-            if (i.type === 'หนังสือส่ง') {
-                lasts[i.type] = `${i.no}`;
-            } else if (i.type === 'หนังสือรับ') {
-                lasts[i.type] = `รับ ${i.no}/${i.year}`;
-            } else {
-                lasts[i.type] = `${i.no}/${i.year}`;
-            }
-        });
+    if (!result.committed) throw new Error('ไม่สามารถจองเลขเอกสารได้');
+    const endNo = Number(result.snapshot.val());
+    return { startNo: endNo - qty + 1, endNo };
+}
 
-        document.getElementById('total-order').innerText = `ยอดรวม: ${counts['คำสั่ง']} รายการ`;
-        document.getElementById('last-order').innerText = lasts['คำสั่ง'];
-        
-        document.getElementById('total-mail').innerText = `ยอดรวม: ${counts['หนังสือส่ง']} รายการ`;
-        document.getElementById('last-mail').innerText = lasts['หนังสือส่ง'];
-        
-        document.getElementById('total-cert').innerText = `ยอดรวม: ${counts['เกียรติบัตร']} รายการ`;
-        document.getElementById('last-cert').innerText = lasts['เกียรติบัตร'];
-        
-        document.getElementById('total-receive').innerText = `ยอดรวม: ${counts['หนังสือรับ']} รายการ`;
-        document.getElementById('last-receive').innerText = lasts['หนังสือรับ'];
+let db = [];
+let currentType = 'คำสั่ง';
+let currentHistoryFilter = 'All';
+const fields = {
+'คำสั่ง': [
+{id:'sub', l:'เรื่องคำสั่ง'}
+],
+'หนังสือส่ง': [
+{id:'sub', l:'เรื่องหนังสือ'},
+{id:'from_dept', l:'จาก (หน่วยงาน/บุคคล)'},
+{id:'to_dept', l:'ถึง (หน่วยงาน/บุคคล)'}
+],
+'เกียรติบัตร': [
+{id:'sub', l:'โครงการ'},
+{id:'rec', l:'ชื่อผู้รับ (ระบุรายบุคคล หรือ "ตามบัญชีรายชื่อแนบท้าย")'},
+{id:'req_dept', l:'หน่วยงาน'},
+{id:'qty', l:'จำนวนเลขที่ต้องการจอง (ฉบับ)', type:'number', val:'1'}
+],
+'หนังสือรับ': [
+{id:'receive_no', l:'เลขรับ (กรอกเองตามทะเบียนจริง เช่น 194/69)'},
+{id:'doc_no_ext', l:'เลขที่หนังสือต้นทาง (ที่ส่งมา)'},
+{id:'sub', l:'เรื่อง'},
+{id:'from_dept', l:'จาก (เช่น สพม.นครราชสีมา)'},
+{id:'to_person', l:'มอบหมาย/ผู้รับผิดชอบ'}
+]
+};
+document.getElementById('doc_date').valueAsDate = new Date();
+docRef.on('value', (s) => {
+db = s.val() ? Object.values(s.val()).reverse() : [];
+updateStats();
+renderTable();
+});
+function updateStats() {
+const counts = { 'คำสั่ง': 0, 'หนังสือส่ง': 0, 'เกียรติบัตร': 0, 'หนังสือรับ': 0 };
+const lasts = { 'คำสั่ง': '-', 'หนังสือส่ง': '-', 'เกียรติบัตร': '-', 'หนังสือรับ': '-' };
+[...db].reverse().forEach(i => {
+counts[i.type]++;
+if (i.type === 'หนังสือส่ง') {
+lasts[i.type] = `${i.no}`;
+} else if (i.type === 'หนังสือรับ') {
+lasts[i.type] = `รับ ${i.no}/${i.year}`;
+} else {
+lasts[i.type] = `${i.no}/${i.year}`;
+}
+});
+document.getElementById('total-order').innerText = `ยอดรวม: ${counts['คำสั่ง']} รายการ`;
+document.getElementById('last-order').innerText = lasts['คำสั่ง'];
+document.getElementById('total-mail').innerText = `ยอดรวม: ${counts['หนังสือส่ง']} รายการ`;
+document.getElementById('last-mail').innerText = lasts['หนังสือส่ง'];
+document.getElementById('total-cert').innerText = `ยอดรวม: ${counts['เกียรติบัตร']} รายการ`;
+document.getElementById('last-cert').innerText = lasts['เกียรติบัตร'];
+document.getElementById('total-receive').innerText = `ยอดรวม: ${counts['หนังสือรับ']} รายการ`;
+document.getElementById('last-receive').innerText = lasts['หนังสือรับ'];
+}
+async function uploadFile(file) {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('upload_preset', CLOUDINARY_PRESET);
+
+    const res = await fetch(CLOUDINARY_URL, { method: 'POST', body: fd });
+    const data = await res.json();
+
+    if (!res.ok || !data.secure_url) {
+        throw new Error(data?.error?.message || 'Cloudinary upload failed');
+    }
+    return data.secure_url;
+}
+async function submitData() {
+    const submitBtn = document.getElementById('submitBtn');
+    const requester = document.getElementById('requester_name').value.trim();
+    const docDate = document.getElementById('doc_date').value;
+
+    if (!requester || !docDate) {
+        alert('กรุณาระบุชื่อและวันที่');
+        return;
     }
 
-    async function uploadFile(file) {
-        const fd = new FormData();
-        fd.append('file', file);
-        fd.append('upload_preset', CLOUDINARY_PRESET);
-        const res = await fetch(CLOUDINARY_URL, { method: 'POST', body: fd });
-        const data = await res.json();
-        return data.secure_url;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังบันทึก...';
+
+    let data = {
+        type: currentType,
+        requester,
+        docDate,
+        timestamp: new Date().toLocaleString('th-TH'),
+        note: document.getElementById('note').value.trim()
+    };
+
+    for (const f of fields[currentType]) {
+        const el = document.getElementById(f.id);
+        const val = (el?.value ?? '').trim();
+        if (!val) {
+            alert('กรอกข้อมูลไม่ครบ');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fa-solid fa-check-circle"></i> ยืนยันการออกเลข';
+            return;
+        }
+        data[f.id] = val;
     }
 
-    async function submitData() {
-        const submitBtn = document.getElementById('submitBtn');
-        const requester = document.getElementById('requester_name').value;
-        const docDate = document.getElementById('doc_date').value;
-        
-        if(!requester || !docDate) { alert('กรุณาระบุชื่อและวันที่'); return; }
-        
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังบันทึก...';
-        
-        let data = {
-            type: currentType,
-            requester: requester,
-            docDate: docDate,
-            timestamp: new Date().toLocaleString('th-TH'),
-            note: document.getElementById('note').value
-        };
-
-        for(let f of fields[currentType]) {
-            const val = document.getElementById(f.id).value;
-            if(!val) { alert('กรอกข้อมูลไม่ครบ'); submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fa-solid fa-check-circle"></i> ยืนยันการออกเลข'; return; }
-            data[f.id] = val;
+    try {
+        let qty = 1;
+        if (data.qty) {
+            qty = Math.max(1, parseInt(data.qty, 10) || 1);
+            delete data.qty;
         }
 
-        try {
-            const sameType = db.filter(i => i.type === currentType);
-            let lastNo = sameType.length > 0 ? Math.max(...sameType.map(i => parseInt(i.no) || 0)) : DEFAULTS[currentType];
-            
-            let qty = 1;
-            if (data.qty) {
-                qty = parseInt(data.qty) || 1;
-                delete data.qty; 
+        let displayNo = '';
+
+        // หนังสือรับ: เลขรับต้องกรอกเองตามทะเบียนจริง ไม่รันเลขอัตโนมัติ
+        if (currentType === 'หนังสือรับ') {
+            const rawReceiveNo = String(data.receive_no || '').trim().replace(/\s+/g, '');
+            const match = rawReceiveNo.match(/^(\d+)(?:\/(\d{2}|\d{4}))?$/);
+
+            if (!match) {
+                throw new Error('เลขรับไม่ถูกต้อง กรุณากรอกเช่น 194/69');
             }
 
-            let startNo = lastNo + 1;
-            let endNo = lastNo + qty;
-            const currentYear = 69;
+            const manualNo = parseInt(match[1], 10);
+            let manualYear = match[2] ? parseInt(match[2], 10) : getThaiShortYear();
+            if (manualYear >= 2500) manualYear = manualYear % 100;
+
+            if (!Number.isFinite(manualNo) || manualNo < 1 || manualYear < 0 || manualYear > 99) {
+                throw new Error('เลขรับไม่ถูกต้อง กรุณากรอกเช่น 194/69');
+            }
+
+            const duplicate = db.some(i =>
+                i.type === 'หนังสือรับ' &&
+                Number(i.no) === manualNo &&
+                Number(i.year) === manualYear
+            );
+            if (duplicate) {
+                throw new Error(`เลขรับ ${manualNo}/${String(manualYear).padStart(2, '0')} มีอยู่ในระบบแล้ว`);
+            }
+
+            const newRef = docRef.push();
+            const itemData = { ...data };
+            delete itemData.receive_no;
+            itemData.id = newRef.key;
+            itemData.no = manualNo;
+            itemData.year = manualYear;
+            await newRef.set(itemData);
+
+            displayNo = `รับที่ ${manualNo}/${String(manualYear).padStart(2, '0')}`;
+        } else {
+            const currentYear = getThaiShortYear();
+            const { startNo, endNo } = await reserveDocumentNumbers(currentType, qty, currentYear);
 
             for (let i = 0; i < qty; i++) {
-                let itemData = { ...data };
-                itemData.id = Date.now() + i;
-                itemData.no = startNo + i;
-                itemData.year = currentYear;
-                
+                const newRef = docRef.push();
+                const itemData = {
+                    ...data,
+                    id: newRef.key,
+                    no: startNo + i,
+                    year: currentYear
+                };
+
                 if (qty > 1) {
                     itemData.note = (itemData.note ? itemData.note + ' ' : '') + `(ชุดจอง ฉบับที่ ${i + 1}/${qty})`;
                 }
-                await docRef.push(itemData);
+
+                await newRef.set(itemData);
             }
-            
-            let displayNo = "";
+
             if (qty > 1) {
                 displayNo = `${startNo}/${currentYear} ถึง ${endNo}/${currentYear} (รวม ${qty} ฉบับ)`;
             } else if (data.type === 'หนังสือส่ง') {
-                displayNo = startNo;
-            } else if (data.type === 'หนังสือรับ') {
-                displayNo = `รับที่ ${startNo}/${currentYear}`;
+                displayNo = String(startNo);
             } else {
                 displayNo = `${startNo}/${currentYear}`;
             }
-            
-            alert('บันทึกสำเร็จ: ' + displayNo);
-            
-            document.getElementById('note').value = '';
-            document.getElementById('requester_name').value = '';
-            fields[currentType].forEach(f => {
-                const el = document.getElementById(f.id);
-                if (el) el.value = f.val || '';
-            });
-        } catch (e) {
-            console.error(e);
-            alert('เกิดข้อผิดพลาด');
-        } finally {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fa-solid fa-check-circle"></i> ยืนยันการออกเลข';
         }
-    }
 
-    function renderTable() {
-        const searchTerm = document.getElementById('search').value.toLowerCase();
-        const tbody = document.querySelector('#dataTable tbody');
-        
-        const filtered = db.filter(i => {
-            const matchType = currentHistoryFilter === 'All' || i.type === currentHistoryFilter;
-            const fullNoLabel = i.type === 'หนังสือส่ง' ? String(i.no) : (i.no + "/" + i.year);
-            const matchSearch = (i.sub || '').toLowerCase().includes(searchTerm) || 
-                                fullNoLabel.includes(searchTerm) || 
-                                (i.requester && i.requester.toLowerCase().includes(searchTerm));
-            return matchType && matchSearch;
+        alert('บันทึกสำเร็จ: ' + displayNo);
+
+        document.getElementById('note').value = '';
+        document.getElementById('requester_name').value = '';
+        fields[currentType].forEach(f => {
+            const el = document.getElementById(f.id);
+            if (el) el.value = f.val || '';
         });
-
-        tbody.innerHTML = filtered.map(i => {
-            let displayFullNo = `${i.no}/${i.year}`;
-            let badgeClass = 'bg-order';
-            
-            if (i.type === 'คำสั่ง') badgeClass = 'bg-order';
-            else if (i.type === 'หนังสือส่ง') { badgeClass = 'bg-mail'; displayFullNo = `ศธ 04306.06/${i.no}`; }
-            else if (i.type === 'เกียรติบัตร') { badgeClass = 'bg-cert'; }
-            else if (i.type === 'หนังสือรับ') { badgeClass = 'bg-receive'; displayFullNo = `เลขรับ ${i.no}/${i.year}`; }
-
-            let extraInfo = '';
-            if (i.type === 'หนังสือรับ') {
-                extraInfo = `อ้างอิง: ${i.doc_no_ext || '-'} | จาก: ${i.from_dept || '-'}<br>มอบหมาย: <strong style="color:var(--text-main);">${i.to_person || '-'}</strong><br>`;
-            } else if (i.from_dept || i.to_dept) {
-                extraInfo = `จาก: ${i.from_dept || '-'} | ถึง: ${i.to_dept || '-'}<br>`;
-            }
-
-            // จัดการลิงก์ไฟล์ (รองรับทั้งระบบเก่าที่เป็นไฟล์เดียว และระบบใหม่ที่เก็บเป็น Array)
-            let fileLinks = '';
-            let urls = i.fileUrls || (i.fileUrl ? [i.fileUrl] : []);
-            
-            if (urls.length > 0) {
-                fileLinks = urls.map((url, index) => 
-                    `<a href="${url}" target="_blank" class="btn-upload upload-success" style="margin-bottom: 4px;">
-                        <i class="fa-solid fa-file-pdf"></i> เปิดไฟล์ ${urls.length > 1 ? index + 1 : ''}
-                    </a>`
-                ).join('');
-            }
-
-            // จัดการปุ่มอัปโหลด
-            let uploadBtn = '';
-            if (i.type === 'หนังสือรับ') {
-                // หนังสือรับ: ให้มีปุ่มเพิ่มไฟล์เสมอ และเปิดให้เลือกหลายไฟล์ได้ (multiple)
-                uploadBtn = `<label class="btn-upload upload-admin admin-only" style="margin-bottom: 4px;">
-                                <input type="file" multiple accept="application/pdf,image/*" style="display:none;" onchange="handleUploadLater(${i.id}, this)">
-                                <i class="fa-solid fa-plus"></i> เพิ่มไฟล์
-                             </label>`;
-            } else if (urls.length === 0) {
-                // ประเภทอื่น: อัปโหลดได้แค่ไฟล์เดียวเหมือนเดิม (ถ้ายังไม่มีไฟล์)
-                uploadBtn = `<label class="btn-upload upload-primary" style="margin-bottom: 4px;">
-                                <input type="file" accept="application/pdf,image/*" style="display:none;" onchange="handleUploadLater(${i.id}, this)">
-                                <i class="fa-solid fa-cloud-arrow-up"></i> อัพโหลด
-                             </label>`;
-            }
-
-            let actionBtn = `<div style="display: flex; gap: 4px; flex-wrap: wrap;">${fileLinks}${uploadBtn}</div>`;
-
-            return `
-                <tr>
-                    <td data-label="เลขที่เอกสาร">
-                        <span class="badge ${badgeClass}">${i.type}</span><br>
-                        <strong style="font-size: 1.1rem; color: var(--primary);">${displayFullNo}</strong>
-                    </td>
-                    <td data-label="รายละเอียด">
-                        <strong style="font-size: 1rem; margin-bottom: 4px; display: block;">${i.sub}</strong>
-                        <div style="color:var(--text-muted); line-height: 1.6; font-size: 0.85rem;">
-                            ${extraInfo}
-                            <span style="display:inline-block; margin-right: 12px;"><i class="fa-solid fa-user" style="opacity:0.7;"></i> ผู้บันทึก: ${i.requester || 'ไม่ระบุ'}</span>
-                            <span style="display:inline-block;"><i class="fa-solid fa-calendar-day" style="opacity:0.7;"></i> ลงวันที่: ${i.docDate || '-'}</span>
-                            ${i.note ? `<br><span style="color: var(--warning);"><i class="fa-solid fa-note-sticky"></i> หมายเหตุ: ${i.note}</span>` : ''}
-                        </div>
-                    </td>
-                    <td data-label="การจัดการ">
-                        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                            ${actionBtn}
-                            <button class="icon-btn admin-only" onclick="deleteItem(${i.id})" title="ลบข้อมูล"><i class="fa-solid fa-trash-can"></i></button>
-                        </div>
-                    </td>
-                </tr>
-            `;
-        }).join('');
+    } catch (e) {
+        console.error(e);
+        alert('เกิดข้อผิดพลาด: ' + (e?.message || 'ไม่สามารถบันทึกข้อมูลได้'));
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fa-solid fa-check-circle"></i> ยืนยันการออกเลข';
     }
+}
 
-    async function handleUploadLater(id, input) {
-        const files = input.files;
-        if (!files || files.length === 0) return;
-        
-        const container = input.parentElement;
-        const originalHTML = container.innerHTML;
-        container.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> อัพโหลด...';
-        
-        try {
-            // อัปโหลดทุกไฟล์ที่เลือกพร้อมกัน
-            const uploadPromises = Array.from(files).map(file => uploadFile(file));
-            const newUrls = await Promise.all(uploadPromises);
-
-            await docRef.orderByChild('id').equalTo(id).once('value', s => {
-                s.forEach(c => {
-                    const data = c.val();
-                    // ดึงไฟล์เก่าที่มีอยู่ (ถ้ามี) มารวมกับไฟล์ใหม่
-                    let existingUrls = data.fileUrls || (data.fileUrl ? [data.fileUrl] : []);
-                    let updatedUrls = [...existingUrls, ...newUrls];
-                    
-                    // บันทึกกลับลงฐานข้อมูล
-                    c.ref.update({ 
-                        fileUrls: updatedUrls, 
-                        fileUrl: updatedUrls[0] // เก็บ fallback ให้ระบบเก่า
-                    });
-                });
-            });
-            alert(`อัพโหลดเอกสารสำเร็จ ${files.length} ไฟล์!`);
-        } catch (e) {
-            console.error(e);
-            alert('เกิดข้อผิดพลาดในการอัพโหลด กรุณาลองใหม่อีกครั้ง');
-            container.innerHTML = originalHTML; 
-            renderTable();
-        }
+function renderTable() {
+const searchTerm = document.getElementById('search').value.toLowerCase();
+const tbody = document.querySelector('#dataTable tbody');
+const filtered = db.filter(i => {
+const matchType = currentHistoryFilter === 'All' || i.type === currentHistoryFilter;
+const fullNoLabel = i.type === 'หนังสือส่ง' ? String(i.no) : (i.no + "/" + i.year);
+const matchSearch = (i.sub || '').toLowerCase().includes(searchTerm) ||
+fullNoLabel.includes(searchTerm) ||
+(i.requester && i.requester.toLowerCase().includes(searchTerm));
+return matchType && matchSearch;
+});
+tbody.innerHTML = filtered.map(i => {
+let displayFullNo = `${i.no}/${i.year}`;
+let badgeClass = 'bg-order';
+if (i.type === 'คำสั่ง') badgeClass = 'bg-order';
+else if (i.type === 'หนังสือส่ง') { badgeClass = 'bg-mail'; displayFullNo = `ศธ 04306.06/${i.no}`; }
+else if (i.type === 'เกียรติบัตร') { badgeClass = 'bg-cert'; }
+else if (i.type === 'หนังสือรับ') { badgeClass = 'bg-receive'; displayFullNo = `เลขรับ ${i.no}/${i.year}`; }
+let extraInfo = '';
+if (i.type === 'หนังสือรับ') {
+extraInfo = `อ้างอิง: ${i.doc_no_ext || '-'} | จาก: ${i.from_dept || '-'}<br>มอบหมาย: <strong style="color:var(--text-main);">${i.to_person || '-'}</strong><br>`;
+} else if (i.from_dept || i.to_dept) {
+extraInfo = `จาก: ${i.from_dept || '-'} | ถึง: ${i.to_dept || '-'}<br>`;
+}
+// จัดการลิงก์ไฟล์ (รองรับทั้งระบบเก่าที่เป็นไฟล์เดียว และระบบใหม่ที่เก็บเป็น Array)
+let fileLinks = '';
+let urls = i.fileUrls || (i.fileUrl ? [i.fileUrl] : []);
+if (urls.length > 0) {
+fileLinks = urls.map((url, index) =>
+`<a href="${url}" target="_blank" class="btn-upload upload-success" style="margin-bottom: 4px;">
+<i class="fa-solid fa-file-pdf"></i> เปิดไฟล์ ${urls.length > 1 ? index + 1 : ''}
+</a>`
+).join('');
+}
+// จัดการปุ่มอัปโหลด
+let uploadBtn = '';
+if (i.type === 'หนังสือรับ') {
+// หนังสือรับ: ให้มีปุ่มเพิ่มไฟล์เสมอ และเปิดให้เลือกหลายไฟล์ได้ (multiple)
+uploadBtn = `<label class="btn-upload upload-admin admin-only" style="margin-bottom: 4px;">
+<input type="file" multiple accept="application/pdf,image/*" style="display:none;" onchange='handleUploadLater(${JSON.stringify(i.id)}, this)'>
+<i class="fa-solid fa-plus"></i> เพิ่มไฟล์
+</label>`;
+} else if (urls.length === 0) {
+// ประเภทอื่น: อัปโหลดได้แค่ไฟล์เดียวเหมือนเดิม (ถ้ายังไม่มีไฟล์)
+uploadBtn = `<label class="btn-upload upload-primary" style="margin-bottom: 4px;">
+<input type="file" accept="application/pdf,image/*" style="display:none;" onchange='handleUploadLater(${JSON.stringify(i.id)}, this)'>
+<i class="fa-solid fa-cloud-arrow-up"></i> อัพโหลด
+</label>`;
+}
+let actionBtn = `<div style="display: flex; gap: 4px; flex-wrap: wrap;">${fileLinks}${uploadBtn}</div>`;
+return `
+<tr>
+<td data-label="เลขที่เอกสาร">
+<span class="badge ${badgeClass}">${i.type}</span><br>
+<strong style="font-size: 1.1rem; color: var(--primary);">${displayFullNo}</strong>
+</td>
+<td data-label="รายละเอียด">
+<strong style="font-size: 1rem; margin-bottom: 4px; display: block;">${i.sub}</strong>
+<div style="color:var(--text-muted); line-height: 1.6; font-size: 0.85rem;">
+${extraInfo}
+<span style="display:inline-block; margin-right: 12px;"><i class="fa-solid fa-user" style="opacity:0.7;"></i> ผู้บันทึก: ${i.requester || 'ไม่ระบุ'}</span>
+<span style="display:inline-block;"><i class="fa-solid fa-calendar-day" style="opacity:0.7;"></i> ลงวันที่: ${i.docDate || '-'}</span>
+${i.note ? `<br><span style="color: var(--warning);"><i class="fa-solid fa-note-sticky"></i> หมายเหตุ: ${i.note}</span>` : ''}
+</div>
+</td>
+<td data-label="การจัดการ">
+<div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+${actionBtn}
+<button class="icon-btn admin-only" onclick='deleteItem(${JSON.stringify(i.id)})' title="ลบข้อมูล"><i class="fa-solid fa-trash-can"></i></button>
+</div>
+</td>
+</tr>
+`;
+}).join('');
+}
+async function handleUploadLater(id, input) {
+const files = input.files;
+if (!files || files.length === 0) return;
+const container = input.parentElement;
+const originalHTML = container.innerHTML;
+container.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> อัพโหลด...';
+try {
+// อัปโหลดทุกไฟล์ที่เลือกพร้อมกัน
+const uploadPromises = Array.from(files).map(file => uploadFile(file));
+const newUrls = await Promise.all(uploadPromises);
+await docRef.orderByChild('id').equalTo(id).once('value', s => {
+s.forEach(c => {
+const data = c.val();
+// ดึงไฟล์เก่าที่มีอยู่ (ถ้ามี) มารวมกับไฟล์ใหม่
+let existingUrls = data.fileUrls || (data.fileUrl ? [data.fileUrl] : []);
+let updatedUrls = [...existingUrls, ...newUrls];
+// บันทึกกลับลงฐานข้อมูล
+c.ref.update({
+fileUrls: updatedUrls,
+fileUrl: updatedUrls[0] // เก็บ fallback ให้ระบบเก่า
+});
+});
+});
+alert(`อัพโหลดเอกสารสำเร็จ ${files.length} ไฟล์!`);
+} catch (e) {
+console.error(e);
+alert('เกิดข้อผิดพลาดในการอัพโหลด กรุณาลองใหม่อีกครั้ง');
+container.innerHTML = originalHTML;
+renderTable();
+}
+}
+function switchType(t, el) {
+currentType = t;
+document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+el.classList.add('active');
+renderForm();
+}
+function filterHistory(type, el) {
+currentHistoryFilter = type;
+document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+el.classList.add('active');
+renderTable();
+}
+function renderForm() {
+document.getElementById('dynamic-form').innerHTML = fields[currentType].map(f => `
+<label>${f.l}</label>
+<input type="${f.type || 'text'}" id="${f.id}" class="form-control" value="${f.val || ''}" ${f.type === 'number' ? 'min="1"' : ''}>
+`).join('');
+}
+// หมายเหตุ: รหัสผ่านด้านล่างเป็นเพียงการซ่อน/แสดง UI ฝั่ง Browser เท่านั้น
+// ไม่ใช่ระบบความปลอดภัยของฐานข้อมูล ควรใช้ Firebase Authentication + Database Rules ในระบบจริง
+function handleAdminAuth() {
+if(prompt("รหัสผ่านผู้ดูแลระบบ (Admin Password):") === "admin1234") {
+document.getElementById('body').classList.add('is-admin');
+alert('✅ เข้าสู่โหมดผู้ดูแลระบบสำเร็จ');
+} else {
+alert('❌ รหัสผ่านไม่ถูกต้อง');
+}
+}
+function logoutAdmin() {
+if(confirm('ต้องการออกจากโหมดผู้ดูแลระบบใช่หรือไม่?')) {
+document.getElementById('body').classList.remove('is-admin');
+alert('ออกจากระบบเรียบร้อยแล้ว');
+if (currentType === 'หนังสือรับ') {
+switchType('คำสั่ง', document.querySelector('.tab-btn'));
+}
+}
+}
+function deleteItem(id) {
+    if (!document.body.classList.contains('is-admin')) {
+        alert('เฉพาะผู้ดูแลระบบเท่านั้น');
+        return;
     }
-
-    function switchType(t, el) { 
-        currentType = t; 
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); 
-        el.classList.add('active'); 
-        renderForm(); 
+    if (confirm('⚠️ ยืนยันการลบรายการนี้? (การลบจะไม่สามารถกู้คืนได้)')) {
+        docRef.orderByChild('id').equalTo(id).once('value', s => s.forEach(c => c.ref.remove()));
     }
-    
-    function filterHistory(type, el) { 
-        currentHistoryFilter = type; 
-        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active')); 
-        el.classList.add('active'); 
-        renderTable(); 
+}
+function clearAllData() {
+    if (!document.body.classList.contains('is-admin')) {
+        alert('เฉพาะผู้ดูแลระบบเท่านั้น');
+        return;
     }
-    
-    function renderForm() { 
-        document.getElementById('dynamic-form').innerHTML = fields[currentType].map(f => `
-            <label>${f.l}</label>
-            <input type="${f.type || 'text'}" id="${f.id}" class="form-control" value="${f.val || ''}" ${f.type === 'number' ? 'min="1"' : ''}>
-        `).join(''); 
+    const typed = prompt('พิมพ์คำว่า DELETE เพื่อยืนยันการล้างข้อมูลทั้งหมด');
+    if (typed === 'DELETE' && confirm('🚨 ยืนยันครั้งสุดท้าย: ลบข้อมูลเอกสารทั้งหมดหรือไม่?')) {
+        docRef.remove();
     }
-    
-    function handleAdminAuth() { 
-        if(prompt("รหัสผ่านผู้ดูแลระบบ (Admin Password):") === "admin1234") {
-            document.getElementById('body').classList.add('is-admin'); 
-            alert('✅ เข้าสู่โหมดผู้ดูแลระบบสำเร็จ');
-        } else {
-            alert('❌ รหัสผ่านไม่ถูกต้อง');
-        }
-    }
-    
-    function logoutAdmin() {
-        if(confirm('ต้องการออกจากโหมดผู้ดูแลระบบใช่หรือไม่?')) {
-            document.getElementById('body').classList.remove('is-admin');
-            alert('ออกจากระบบเรียบร้อยแล้ว');
-            
-            if (currentType === 'หนังสือรับ') {
-                switchType('คำสั่ง', document.querySelector('.tab-btn'));
-            }
-        }
-    }
-    
-    function deleteItem(id) { 
-        if(confirm('⚠️ ยืนยันการลบรายการนี้? (การลบจะไม่สามารถกู้คืนได้)')) docRef.orderByChild('id').equalTo(id).once('value', s => s.forEach(c => c.ref.remove())); 
-    }
-    
-    function clearAllData() {
-        if(confirm('🚨 คำเตือนขั้นสูง: คุณกำลังจะลบข้อมูลทั้งหมดในระบบ! ยืนยันหรือไม่?')) {
-            docRef.remove();
-        }
-    }
-
-    function exportToExcel() {
-        let csv = "\uFEFFเลขที่,ประเภท,เรื่อง,อ้างอิง(หนังสือรับ),จาก,ถึง/มอบหมาย,ชื่อผู้ขอ,ลงวันที่,หมายเหตุ,ลิงก์ไฟล์\n";
-        db.forEach(i => {
-            const csvNo = i.type === 'หนังสือส่ง' ? i.no : `${i.no}/${i.year}`;
-            
-            // รวมลิงก์ทั้งหมดกรณีมีหลายไฟล์
-            const fileLinks = i.fileUrls ? i.fileUrls.join(', ') : (i.fileUrl || '');
-            
-            csv += `"${csvNo}","${i.type}","${i.sub}","${i.doc_no_ext || ''}","${i.from_dept || ''}","${i.to_dept || i.to_person || ''}","${i.requester || ''}","${i.docDate || ''}","${i.note || ''}","${fileLinks}"\n`;
-        });
-        
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.setAttribute("download", `docuflow_export_${new Date().toLocaleDateString()}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
-
-    setInterval(() => { 
-        const now = new Date();
-        const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
-        document.getElementById('clock').innerHTML = `<i class="fa-regular fa-clock"></i> ` + now.toLocaleDateString('th-TH', options); 
-    }, 1000);
-    
-    renderForm();
+}
+function exportToExcel() {
+let csv = "\uFEFFเลขที่,ประเภท,เรื่อง,อ้างอิง(หนังสือรับ),จาก,ถึง/มอบหมาย,ชื่อผู้ขอ,ลงวันที่,หมายเหตุ,ลิงก์ไฟล์\n";
+db.forEach(i => {
+const csvNo = i.type === 'หนังสือส่ง' ? i.no : `${i.no}/${i.year}`;
+// รวมลิงก์ทั้งหมดกรณีมีหลายไฟล์
+const fileLinks = i.fileUrls ? i.fileUrls.join(', ') : (i.fileUrl || '');
+csv += `"${csvNo}","${i.type}","${i.sub}","${i.doc_no_ext || ''}","${i.from_dept || ''}","${i.to_dept || i.to_person || ''}","${i.requester || ''}","${i.docDate || ''}","${i.note || ''}","${fileLinks}"\n`;
+});
+const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+const link = document.createElement("a");
+link.href = URL.createObjectURL(blob);
+link.setAttribute("download", `docuflow_export_${new Date().toLocaleDateString()}.csv`);
+document.body.appendChild(link);
+link.click();
+document.body.removeChild(link);
+}
+setInterval(() => {
+const now = new Date();
+const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+document.getElementById('clock').innerHTML = `<i class="fa-regular fa-clock"></i> ` + now.toLocaleDateString('th-TH', options);
+}, 1000);
+renderForm();
 </script>
 </body>
 </html>
